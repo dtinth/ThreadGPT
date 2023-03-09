@@ -197,6 +197,30 @@ function ThreadGPT(props: ThreadGPT) {
                         },
                       ]
                     : []),
+                  ...(data.depth === 0
+                    ? [
+                        {
+                          text: 'Reset OpenAI secret key',
+                          onClick: async () => {
+                            const secretKey = prompt('Enter OpenAI secret key')
+                            if (!secretKey) {
+                              alert('OpenAI secret key is required')
+                              return
+                            }
+                            const oldKey = await ikv.get('openaiSecretKey')
+                            if (oldKey !== secretKey) {
+                              if (
+                                !confirm('This will replace your stored key')
+                              ) {
+                                alert('phew!')
+                                return
+                              }
+                            }
+                            await ikv.set('openaiSecretKey', secretKey)
+                          },
+                        },
+                      ]
+                    : []),
                 ]}
               />
             </div>
