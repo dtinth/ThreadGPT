@@ -239,12 +239,14 @@ function ThreadGPT(props: ThreadGPT) {
                         {
                           text: 'Reset OpenAI secret key',
                           onClick: async () => {
-                            const secretKey = prompt('Enter OpenAI secret key')
-                            if (!secretKey) {
-                              alert('OpenAI secret key is required')
+                            const oldKey = await ikv.get('openaiSecretKey')
+                            const secretKey = prompt(
+                              'Enter OpenAI secret key',
+                              oldKey || '',
+                            )
+                            if (secretKey == null) {
                               return
                             }
-                            const oldKey = await ikv.get('openaiSecretKey')
                             if (oldKey !== secretKey) {
                               if (
                                 !confirm('This will replace your stored key')
