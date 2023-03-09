@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/v1/chat/completions",
+      "destination": "https://api.openai.com/v1/chat/completions"
+    }
+  ]
+}
