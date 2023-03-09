@@ -60,6 +60,14 @@ function ThreadGPT(props: ThreadGPT) {
       }
 
       if (text === null) {
+        let secretKey = await ikv.get('openaiSecretKey')
+        if (!secretKey) {
+          secretKey = prompt('Enter OpenAI secret key')
+          if (!secretKey) {
+            throw new Error('OpenAI secret key is required')
+          }
+          await ikv.set('openaiSecretKey', secretKey)
+        }
         const response = await redaxios.post(
           '/v1/chat/completions',
           {
@@ -68,7 +76,7 @@ function ThreadGPT(props: ThreadGPT) {
           },
           {
             headers: {
-              authorization: `Bearer ${await ikv.get('openaiSecretKey')}`,
+              authorization: `Bearer ${secretKey}`,
             },
           },
         )
