@@ -1,34 +1,351 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import './App.css'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { ikv } from './ikv'
+import { ReactNode, useMemo, useState } from 'react'
+import ObjectID from 'bson-objectid'
+import redaxios from 'redaxios'
+import { micromark } from 'micromark'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <div className="App">
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+    <div className="p-4">
+      <h1>ThreadGPT</h1>
+      <ThreadGPT nodeId="root" previousMessages={[]} />
     </div>
   )
 }
 
+interface ThreadGPT {
+  nodeId: string
+  previousMessages: ThreadNode['message'][]
+  removeSelf?: () => void
+}
+function ThreadGPT(props: ThreadGPT) {
+  const query = useQuery({
+    queryKey: ['threadgpt', props.nodeId],
+    queryFn: async (): Promise<ThreadNode> => {
+      const key = storageKey(props.nodeId)
+      const node = await ikv.get(key)
+      if (!node) {
+        const defaultNode = { depth: 0, children: [] }
+        await ikv.set(key, defaultNode)
+        return defaultNode
+      }
+      return node
+    },
+  })
+  const nextMessages = useMemo(() => {
+    return [
+      ...props.previousMessages,
+      ...(query.data?.message ? [query.data?.message] : []),
+    ]
+  }, [query.data?.message, props.previousMessages])
+  const mutation = useMutation({
+    mutationFn: async (text: string | null) => {
+      const parent = await ikv.get(storageKey(props.nodeId))
+      if (!parent) {
+        throw new Error('Parent node not found')
+      }
+
+      async function addNode(message: ThreadNode['message'], response?: any) {
+        const id = String(ObjectID())
+        const node: ThreadNode = {
+          depth: parent.depth + 1,
+          children: [],
+          message: message,
+          response,
+          timestamp: new Date().toJSON(),
+        }
+        await ikv.set(storageKey(id), node)
+        parent.children.unshift(id)
+      }
+
+      if (text === null) {
+        const response = await redaxios.post(
+          '/v1/chat/completions',
+          {
+            model: 'gpt-3.5-turbo',
+            messages: nextMessages,
+          },
+          {
+            headers: {
+              authorization: `Bearer ${await ikv.get('openaiSecretKey')}`,
+            },
+          },
+        )
+        for (const [index, choice] of response.data.choices.entries()) {
+          await addNode(choice.message, {
+            data: response.data,
+            index,
+          })
+        }
+      } else {
+        if (!text.trim()) {
+          throw new Error('Message cannot be empty')
+        }
+        await addNode({ role: 'user', content: text })
+      }
+      await ikv.set(storageKey(props.nodeId), parent)
+      query.refetch()
+    },
+  })
+  const [showCreateForm, setShowCreateForm] = useState<boolean | undefined>(
+    undefined,
+  )
+  const html = useMemo(() => {
+    return micromark(query.data?.message?.content ?? '')
+  }, [query.data?.message?.content])
+  if (query.isLoading) {
+    return <div>Loading...</div>
+  }
+  if (query.isError) {
+    return (
+      <div>
+        Unable to fetch node {props.nodeId}: {String(query.error)}
+      </div>
+    )
+  }
+  const data = query.data
+  const defaultShowCreateForm =
+    data.children.length === 0 && data.message?.role !== 'user'
+  const showForm = showCreateForm ?? defaultShowCreateForm
+  const verb = data.depth === 0 ? 'Start a thread' : 'Reply'
+  return (
+    <>
+      <div
+        id={`message-${props.nodeId}`}
+        data-depth={data.depth}
+        data-role={data.message?.role}
+        data-content={data.message?.content}
+        data-timestamp={data.timestamp}
+      >
+        {data.message ? (
+          <>
+            <Indent depth={data.depth - 1}>
+              <div className="pt-3">
+                <div className="d-flex align-items-center">
+                  <div
+                    className={`rounded-circle ${
+                      data.message.role === 'user' ? 'bg-primary' : 'bg-success'
+                    } me-3`}
+                    style={{ width: '32px', height: '32px' }}
+                  />
+                  <strong>{data.message.role}</strong>
+                </div>
+              </div>
+            </Indent>
+            <Indent depth={data.depth}>
+              <div
+                className="ps-3 pb-3"
+                dangerouslySetInnerHTML={{ __html: html }}
+                style={{ maxWidth: '42em' }}
+              />
+            </Indent>
+          </>
+        ) : null}
+        {!showForm && (
+          <Indent depth={data.depth}>
+            <div className="d-flex ps-3 py-2 gap-2">
+              {data.message?.role === 'user' ? (
+                <button
+                  className="btn btn-success"
+                  onClick={() => mutation.mutate(null)}
+                  disabled={mutation.isLoading}
+                >
+                  {mutation.isLoading ? 'Please wait…' : 'Generate a reply'}
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setShowCreateForm(true)}
+                  disabled={mutation.isLoading}
+                >
+                  {verb}
+                </button>
+              )}
+              <Dropdown
+                items={[
+                  ...(data.message?.content
+                    ? [
+                        {
+                          text: 'Copy',
+                          onClick: () => {
+                            navigator.clipboard.writeText(
+                              data.message?.content || '',
+                            )
+                          },
+                        },
+                      ]
+                    : []),
+                  ...(props.removeSelf
+                    ? [{ text: 'Remove', onClick: props.removeSelf }]
+                    : []),
+                  ...(data.children.length > 0
+                    ? [
+                        {
+                          text: 'Remove all replies',
+                          onClick: () => {
+                            alert('Not implemented yet')
+                          },
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            </div>
+          </Indent>
+        )}
+        {mutation.isError && (
+          <Indent depth={data.depth + 1}>
+            <div className="alert alert-danger" role="alert">
+              {String(mutation.error)}
+            </div>
+          </Indent>
+        )}
+        {showForm && (
+          <Indent depth={data.depth + 1}>
+            <CreateForm
+              draftId={props.nodeId}
+              onCancel={() => setShowCreateForm(false)}
+              onSubmit={(text) => (
+                mutation.mutate(text), setShowCreateForm(false)
+              )}
+              loading={mutation.isLoading}
+              verb={verb}
+            />
+          </Indent>
+        )}
+      </div>
+      {data.children.map((childId) => (
+        <ThreadGPT
+          nodeId={childId}
+          key={childId}
+          previousMessages={nextMessages}
+        />
+      ))}
+    </>
+  )
+}
+
+interface Indent {
+  depth: number
+  children?: ReactNode
+}
+function Indent(props: Indent) {
+  return (
+    <div className="d-flex">
+      {Array.from({ length: Math.max(0, props.depth) }, (_, i) => (
+        <div
+          key={i}
+          className="flex-shrink-0"
+          style={{ margin: '0 15px', width: '2px', background: '#fff3' }}
+        />
+      ))}
+      <div className="flex-grow-1">{props.children}</div>
+    </div>
+  )
+}
+
+interface ThreadNode {
+  depth: number
+  children: string[]
+  timestamp?: string
+  message?: {
+    role: 'system' | 'user' | 'assistant'
+    content: string
+  }
+  /** Raw OpenAI response */
+  response?: any
+}
+
+interface CreateForm {
+  draftId: string
+  onCancel: () => void
+  onSubmit: (text: string) => void
+  loading?: boolean
+  verb: string
+}
+function storageKey(nodeId: string) {
+  return `threadgpt/${nodeId}`
+}
+
+function CreateForm(props: CreateForm) {
+  const defaultValue = sessionStorage.getItem('draft:' + props.draftId) || ''
+  return (
+    <form
+      className="d-flex gap-1 flex-column"
+      onSubmit={(e) => {
+        e.preventDefault()
+        const form = e.target as HTMLFormElement
+        const text = (form.elements as any).message.value
+        sessionStorage.removeItem('draft:' + props.draftId)
+        props.onSubmit(text)
+      }}
+      style={{ maxWidth: '42em' }}
+    >
+      <textarea
+        name="message"
+        className="form-control"
+        rows={4}
+        defaultValue={defaultValue}
+        onChange={(e) => {
+          sessionStorage.setItem('draft:' + props.draftId, e.target.value)
+        }}
+        disabled={props.loading}
+      />
+      <div className="d-flex gap-1">
+        <button
+          className="btn btn-secondary"
+          onClick={props.onCancel}
+          disabled={props.loading}
+        >
+          Cancel
+        </button>
+        <button className="btn btn-primary ms-auto" disabled={props.loading}>
+          {props.verb}
+        </button>
+      </div>
+    </form>
+  )
+}
+
 export default App
+
+interface DropdownItem {
+  text: string
+  onClick: () => void
+}
+
+interface Dropdown {
+  items: DropdownItem[]
+}
+
+function Dropdown({ items }: Dropdown) {
+  return (
+    <div className="dropdown">
+      <button
+        className="btn btn-outline-secondary dropdown-toggle"
+        type="button"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+      >
+        ⋮
+      </button>
+      <ul className="dropdown-menu">
+        {items.map((item) => (
+          <li key={item.text}>
+            <a
+              className="dropdown-item"
+              href="#"
+              onClick={(e) => {
+                e.preventDefault()
+                item.onClick()
+              }}
+            >
+              {item.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
