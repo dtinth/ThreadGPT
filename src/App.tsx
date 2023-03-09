@@ -159,7 +159,11 @@ function ThreadGPT(props: ThreadGPT) {
                   onClick={() => mutation.mutate(null)}
                   disabled={mutation.isLoading}
                 >
-                  {mutation.isLoading ? 'Please wait…' : 'Generate a reply'}
+                  {mutation.isLoading
+                    ? 'Please wait…'
+                    : data.children.length > 0
+                    ? 'Generate another reply'
+                    : 'Generate a reply'}
                 </button>
               ) : (
                 <button
@@ -175,10 +179,30 @@ function ThreadGPT(props: ThreadGPT) {
                   ...(data.message?.content
                     ? [
                         {
-                          text: 'Copy',
+                          text: 'Copy message content',
                           onClick: () => {
                             navigator.clipboard.writeText(
                               data.message?.content || '',
+                            )
+                          },
+                        },
+                      ]
+                    : []),
+                  {
+                    text: 'Copy conversation as JSON',
+                    onClick: () => {
+                      navigator.clipboard.writeText(
+                        JSON.stringify(nextMessages, null, 2),
+                      )
+                    },
+                  },
+                  ...(data.response
+                    ? [
+                        {
+                          text: 'Copy OpenAI API response as JSON',
+                          onClick: () => {
+                            navigator.clipboard.writeText(
+                              JSON.stringify(data.response, null, 2),
                             )
                           },
                         },
