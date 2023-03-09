@@ -191,8 +191,21 @@ function ThreadGPT(props: ThreadGPT) {
                     ? [
                         {
                           text: 'Remove all replies',
-                          onClick: () => {
-                            alert('Not implemented yet')
+                          onClick: async () => {
+                            const node = (await ikv.get(
+                              storageKey(props.nodeId),
+                            )) as ThreadNode
+                            if (!node) {
+                              throw new Error('Message not found')
+                            }
+                            const childIds = node.children
+                            node.children = []
+                            await ikv.set(storageKey(props.nodeId), node)
+                            let deleted = await Promise.all(
+                              childIds.map(rmRf),
+                            ).then((r) => r.reduce((a, b) => a + b, 0))
+                            alert(`Deleted ${deleted} messages`)
+                            query.refetch()
                           },
                         },
                       ]
@@ -252,6 +265,17 @@ function ThreadGPT(props: ThreadGPT) {
           nodeId={childId}
           key={childId}
           previousMessages={nextMessages}
+          removeSelf={async () => {
+            const node = (await ikv.get(storageKey(props.nodeId))) as ThreadNode
+            if (!node) {
+              throw new Error('Message not found')
+            }
+            node.children = node.children.filter((id) => id !== childId)
+            await ikv.set(storageKey(props.nodeId), node)
+            let deleted = await rmRf(childId)
+            alert(`Deleted ${deleted} messages`)
+            query.refetch()
+          }}
         />
       ))}
     </>
@@ -380,4 +404,17 @@ function Dropdown({ items }: Dropdown) {
       </ul>
     </div>
   )
+}
+
+async function rmRf(nodeId: string): Promise<number> {
+  const node = await ikv.get<ThreadNode>(storageKey(nodeId))
+  if (!node) {
+    return 0
+  }
+  return (
+    await Promise.all([
+      ...node.children.map((childId) => rmRf(childId)),
+      ikv.del(storageKey(nodeId)).then(() => 1),
+    ])
+  ).reduce((a, b) => a + b, 0)
 }
