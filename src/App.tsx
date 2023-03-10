@@ -14,6 +14,8 @@ function App() {
   )
 }
 
+type Role = 'system' | 'user' | 'assistant'
+
 interface ThreadGPT {
   nodeId: string
   previousMessages: ThreadNode['message'][]
@@ -47,7 +49,10 @@ function ThreadGPT(props: ThreadGPT) {
     ]
   }, [query.data?.message, props.previousMessages])
   const mutation = useMutation({
-    mutationFn: async (text: string | null) => {
+    mutationFn: async (data: { text: string | null, role: Role | null} | null) => {
+      const text = data?.text ?? null
+      const role = data?.role ?? 'user'
+
       const parent = await ikv.get(storageKey(props.nodeId))
       if (!parent) {
         throw new Error('Parent node not found')
@@ -97,7 +102,7 @@ function ThreadGPT(props: ThreadGPT) {
         if (!text.trim()) {
           throw new Error('Message cannot be empty')
         }
-        await addNode({ role: 'user', content: text })
+        await addNode({ role: role, content: text })
       }
       await ikv.set(storageKey(props.nodeId), parent)
       query.refetch()
@@ -185,17 +190,26 @@ function ThreadGPT(props: ThreadGPT) {
           <Indent depth={data.depth}>
             <div className="d-flex ps-3 py-2 gap-2">
               {data.message?.role === 'user' ? (
-                <button
-                  className="btn btn-success"
-                  onClick={() => mutation.mutate(null)}
-                  disabled={mutation.isLoading}
-                >
-                  {mutation.isLoading
-                    ? 'Please wait…'
-                    : data.children.length > 0
-                    ? 'Generate another reply'
-                    : 'Generate a reply'}
-                </button>
+                <>
+                  <button
+                    className="btn btn-success"
+                    onClick={() => mutation.mutate(null)}
+                    disabled={mutation.isLoading}
+                  >
+                    {mutation.isLoading
+                      ? 'Please wait…'
+                      : data.children.length > 0
+                      ? 'Generate another reply'
+                      : 'Generate a reply'}
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setShowCreateForm(true)}
+                    disabled={mutation.isLoading}
+                  >
+                    Custom reply
+                  </button>
+                </>
               ) : (
                 <button
                   className="btn btn-primary"
@@ -308,8 +322,8 @@ function ThreadGPT(props: ThreadGPT) {
             <CreateForm
               draftId={props.nodeId}
               onCancel={() => setShowCreateForm(false)}
-              onSubmit={(text) => (
-                mutation.mutate(text), setShowCreateForm(false)
+              onSubmit={(text, role) => (
+                mutation.mutate({text, role}), setShowCreateForm(false)
               )}
               loading={mutation.isLoading}
               verb={verb}
@@ -363,7 +377,7 @@ interface ThreadNode {
   children: string[]
   timestamp?: string
   message?: {
-    role: 'system' | 'user' | 'assistant'
+    role: Role
     content: string
   }
   /** Raw OpenAI response */
@@ -373,7 +387,7 @@ interface ThreadNode {
 interface CreateForm {
   draftId: string
   onCancel: () => void
-  onSubmit: (text: string) => void
+  onSubmit: (text: string, role: Role) => void
   loading?: boolean
   verb: string
 }
@@ -383,6 +397,12 @@ function storageKey(nodeId: string) {
 
 function CreateForm(props: CreateForm) {
   const defaultValue = sessionStorage.getItem('draft:' + props.draftId) || ''
+  const [getRole, setRole] = useState<Role>('user')
+  function setMessageRole(role: Role) {
+    setRole(role)
+    sessionStorage.setItem('draft-role:' + props.draftId, role)
+  }
+
   return (
     <form
       className="d-flex gap-1 flex-column"
@@ -391,10 +411,16 @@ function CreateForm(props: CreateForm) {
         const form = e.target as HTMLFormElement
         const text = (form.elements as any).message.value
         sessionStorage.removeItem('draft:' + props.draftId)
-        props.onSubmit(text)
+        sessionStorage.removeItem('draft-role:' + props.draftId)
+        props.onSubmit(text, getRole)
       }}
       style={{ maxWidth: '42em' }}
     >
+      <div className="btn-group" role="group" aria-label="Basic example">
+        <button type="button" onClick={() => setMessageRole('user')} className={`btn ${getRole === 'user' ? 'btn-primary' : 'btn-outline-primary'}`}>User</button>
+        <button type="button" onClick={() => setMessageRole('assistant')} className={`btn ${getRole === 'assistant' ? 'btn-primary' : 'btn-outline-primary'}`}>Assistant</button>
+        <button type="button" onClick={() => setMessageRole('system')} className={`btn ${getRole === 'system' ? 'btn-primary' : 'btn-outline-primary'}`}>System</button>
+      </div>
       <textarea
         name="message"
         className="form-control"
