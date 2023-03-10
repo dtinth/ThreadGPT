@@ -5,11 +5,13 @@ import ObjectID from 'bson-objectid'
 import redaxios from 'redaxios'
 import { micromark } from 'micromark'
 
+const rootNode = 'root'
+
 function App() {
   return (
     <div className="p-4">
       <h1>ThreadGPT</h1>
-      <ThreadGPT nodeId="root" previousMessages={[]} />
+      <ThreadGPT nodeId={rootNode} previousMessages={[]} />
     </div>
   )
 }
@@ -22,9 +24,11 @@ type Message = {
 
 interface ThreadGPT {
   nodeId: string
+  parentNodeId?: string
   previousMessages: ThreadNode['message'][]
   removeSelf?: () => void
 }
+
 interface APIError {
   data: {
     error: {
@@ -32,6 +36,7 @@ interface APIError {
     }
   }
 }
+
 function ThreadGPT(props: ThreadGPT) {
   const query = useQuery({
     queryKey: ['threadgpt', props.nodeId],
@@ -57,10 +62,11 @@ function ThreadGPT(props: ThreadGPT) {
       const text = data?.text ?? null
       const role = data?.role ?? 'user'
       const isTweak = data?.isTweak ?? false
+      const parentNodeId = props.parentNodeId ?? props.nodeId
 
-      // i want to find parent node idk how ;w;
+      const selectedParent = isTweak ? parentNodeId : props.nodeId
 
-      const parent = await ikv.get(storageKey(props.nodeId))
+      const parent = await ikv.get(storageKey(selectedParent))
       if (!parent) {
         throw new Error('Parent node not found')
       }
@@ -111,13 +117,11 @@ function ThreadGPT(props: ThreadGPT) {
         }
         await addNode({ role: role, content: text })
       }
-      await ikv.set(storageKey(props.nodeId), parent)
+      await ikv.set(storageKey(selectedParent), parent)
       query.refetch()
     },
   })
-  const [showCreateForm, setShowCreateForm] = useState<boolean | undefined>(
-    undefined,
-  )
+  const [showCreateForm, setShowCreateForm] = useState<boolean | undefined>(undefined)
   const [TweakMessage, setTweakMessage] = useState<Message & { isTweak: boolean }>({
     role: 'user',
     content: '',
@@ -140,7 +144,7 @@ function ThreadGPT(props: ThreadGPT) {
   const defaultShowCreateForm =
     data.children.length === 0 && data.message?.role !== 'user'
   const showForm = showCreateForm ?? defaultShowCreateForm
-  const verb = data.depth === 0 ? 'Start a thread' : 'Reply'
+  const verb = data.depth === 0 ? 'Start a thread' : TweakMessage.isTweak ? 'Tweak' : 'Reply'
   const isAPIError = (error: APIError | unknown): error is APIError => {
     return (
       typeof error === 'object' &&
@@ -367,6 +371,7 @@ function ThreadGPT(props: ThreadGPT) {
       {data.children.map((childId) => (
         <ThreadGPT
           nodeId={childId}
+          parentNodeId={props.nodeId}
           key={childId}
           previousMessages={nextMessages}
           removeSelf={async () => {
