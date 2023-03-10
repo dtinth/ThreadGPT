@@ -15,6 +15,10 @@ function App() {
 }
 
 type Role = 'system' | 'user' | 'assistant'
+type Message = {
+  role: Role
+  content: string
+}
 
 interface ThreadGPT {
   nodeId: string
@@ -49,9 +53,12 @@ function ThreadGPT(props: ThreadGPT) {
     ]
   }, [query.data?.message, props.previousMessages])
   const mutation = useMutation({
-    mutationFn: async (data: { text: string | null, role: Role | null} | null) => {
+    mutationFn: async (data: { text: string | null, role: Role | null, isTweak: boolean } | null) => {
       const text = data?.text ?? null
       const role = data?.role ?? 'user'
+      const isTweak = data?.isTweak ?? false
+
+      // i want to find parent node idk how ;w;
 
       const parent = await ikv.get(storageKey(props.nodeId))
       if (!parent) {
@@ -111,6 +118,11 @@ function ThreadGPT(props: ThreadGPT) {
   const [showCreateForm, setShowCreateForm] = useState<boolean | undefined>(
     undefined,
   )
+  const [TweakMessage, setTweakMessage] = useState<Message & { isTweak: boolean }>({
+    role: 'user',
+    content: '',
+    isTweak: false,
+  })
   const html = useMemo(() => {
     return micromark(query.data?.message?.content ?? '')
   }, [query.data?.message?.content])
@@ -224,6 +236,25 @@ function ThreadGPT(props: ThreadGPT) {
                   ...(data.message?.content
                     ? [
                         {
+                          text: 'Tweak message',
+                          onClick: () => {
+                            setShowCreateForm(true)
+                            setTweakMessage(data.message ? {
+                              role: data.message.role || 'user',
+                              content: data.message.content || '',
+                              isTweak: true,
+                            } : {
+                              role: 'user',
+                              content: '',
+                              isTweak: false,
+                            })
+                          },
+                        },
+                      ]
+                    : []),
+                  ...(data.message?.content
+                    ? [
+                        {
                           text: 'Copy message content',
                           onClick: () => {
                             navigator.clipboard.writeText(
@@ -318,14 +349,16 @@ function ThreadGPT(props: ThreadGPT) {
           </Indent>
         )}
         {showForm && (
-          <Indent depth={data.depth + 1}>
+          <Indent depth={TweakMessage.isTweak ? data.depth - 1 : data.depth + 1}>
             <CreateForm
               draftId={props.nodeId}
               onCancel={() => setShowCreateForm(false)}
               onSubmit={(text, role) => (
-                mutation.mutate({text, role}), setShowCreateForm(false)
+                mutation.mutate({ text, role, isTweak: TweakMessage.isTweak }), setShowCreateForm(false), setTweakMessage({ role: 'user', content: '', isTweak: false })
               )}
               loading={mutation.isLoading}
+              defaultValue={TweakMessage.content}
+              defaultRole={TweakMessage.role}
               verb={verb}
             />
           </Indent>
@@ -376,10 +409,7 @@ interface ThreadNode {
   depth: number
   children: string[]
   timestamp?: string
-  message?: {
-    role: Role
-    content: string
-  }
+  message?: Message
   /** Raw OpenAI response */
   response?: any
 }
@@ -390,14 +420,16 @@ interface CreateForm {
   onSubmit: (text: string, role: Role) => void
   loading?: boolean
   verb: string
+  defaultValue?: string
+  defaultRole?: Role
 }
 function storageKey(nodeId: string) {
   return `threadgpt/${nodeId}`
 }
 
 function CreateForm(props: CreateForm) {
-  const defaultValue = sessionStorage.getItem('draft:' + props.draftId) || ''
-  let storageRole = sessionStorage.getItem('draft-role:' + props.draftId) || 'user'
+  const defaultValue = props.defaultValue || sessionStorage.getItem('draft:' + props.draftId) || ''
+  let storageRole = props.defaultRole || sessionStorage.getItem('draft-role:' + props.draftId) || 'user'
   var defaultRole: Role = 'user'
 
   if(['system', 'user', 'assistant'].includes(storageRole)) {
