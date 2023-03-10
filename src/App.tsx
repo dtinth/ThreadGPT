@@ -169,7 +169,7 @@ function ThreadGPT(props: ThreadGPT) {
                 <div className="d-flex align-items-center">
                   <div
                     className={`rounded-circle ${
-                      data.message.role === 'user' ? 'bg-primary' : 'bg-success'
+                      data.message.role === 'user' ? 'bg-primary' : data.message.role === 'system' ? 'bg-warning' : 'bg-success'
                     } me-3`}
                     style={{ width: '32px', height: '32px' }}
                   />
@@ -423,10 +423,10 @@ function CreateForm(props: CreateForm) {
       }}
       style={{ maxWidth: '42em' }}
     >
-      <div className="btn-group" role="group" aria-label="Basic example">
-        <button type="button" onClick={() => setMessageRole('user')} className={`btn ${getRole === 'user' ? 'btn-primary' : 'btn-outline-primary'}`}>User</button>
-        <button type="button" onClick={() => setMessageRole('assistant')} className={`btn ${getRole === 'assistant' ? 'btn-primary' : 'btn-outline-primary'}`}>Assistant</button>
-        <button type="button" onClick={() => setMessageRole('system')} className={`btn ${getRole === 'system' ? 'btn-primary' : 'btn-outline-primary'}`}>System</button>
+      <div className="btn-group align-self-start" role="group" aria-label="Basic example">
+        <button type="button" onClick={() => setMessageRole('user')} className={`btn ${getRole === 'user' ? 'btn-primary' : 'btn-outline-secondary'}`}>User</button>
+        <button type="button" onClick={() => setMessageRole('assistant')} className={`btn ${getRole === 'assistant' ? 'btn-success' : 'btn-outline-secondary'}`}>Assistant</button>
+        <button type="button" onClick={() => setMessageRole('system')} className={`btn ${getRole === 'system' ? 'btn-warning' : 'btn-outline-secondary'}`}>System</button>
       </div>
       <textarea
         name="message"
