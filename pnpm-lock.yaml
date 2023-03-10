@@ -1,6 +1,7 @@
 lockfileVersion: 5.4
 
 specifiers:
+  '@github/relative-time-element': ^4.2.3
   '@popperjs/core': ^2.11.6
   '@tanstack/react-query': ^4.26.1
   '@types/react': ^18.0.27
@@ -17,6 +18,7 @@ specifiers:
   vite: ^4.1.0
 
 dependencies:
+  '@github/relative-time-element': 4.2.3
   '@popperjs/core': 2.11.6
   '@tanstack/react-query': 4.26.1_biqbaboplfbrettd7655fr4n2y
   bootstrap: 5.3.0-alpha1_@popperjs+core@2.11.6
@@ -461,6 +463,10 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
+
+  /@github/relative-time-element/4.2.3:
+    resolution: {integrity: sha512-M5NaacbpSmKUk6tYQ8r/LokSHeIb6D7rTTOqZ/htQX3b7KGKiDXI0t/WF7UDy58Go0NNfEahE9WzGEKcSjqfrA==}
+    dev: false
 
   /@jridgewell/gen-mapping/0.1.1:
     resolution: {integrity: sha512-sQXCasFk+U8lWYEe66WxRDOE9PjVz4vSM51fTu3Hw+ClTpUSQb718772vH3pyS5pShp6lvQM7SxgIDXXXmOX7w==}
