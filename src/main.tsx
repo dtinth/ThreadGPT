@@ -9,6 +9,7 @@ import redaxios from 'redaxios'
 import { ikv } from './ikv'
 import ObjectID from 'bson-objectid'
 import 'bootstrap'
+import '@github/relative-time-element'
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

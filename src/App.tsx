@@ -173,7 +173,14 @@ function ThreadGPT(props: ThreadGPT) {
                     } me-3`}
                     style={{ width: '32px', height: '32px' }}
                   />
-                  <strong>{data.message.role}</strong>
+                  <span>
+                    <strong>{data.message.role}</strong>
+                    {' '}
+                    <small className='text-muted'>
+                      <relative-time datetime={data.timestamp}></relative-time>
+                      {renderTokens(data.response)}
+                    </small>
+                  </span>
                 </div>
               </div>
             </Indent>
@@ -349,6 +356,19 @@ function ThreadGPT(props: ThreadGPT) {
           }}
         />
       ))}
+    </>
+  )
+}
+
+function renderTokens(response: any) {
+  const usage = response?.data?.usage
+  if (!usage) return ''
+  return (
+    <>
+      {', '}
+      <span title={`${usage.prompt_tokens} prompt, ${usage.completion_tokens} completion`}>
+        {usage.total_tokens} tokens
+      </span>
     </>
   )
 }
