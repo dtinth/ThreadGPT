@@ -397,7 +397,14 @@ function storageKey(nodeId: string) {
 
 function CreateForm(props: CreateForm) {
   const defaultValue = sessionStorage.getItem('draft:' + props.draftId) || ''
-  const [getRole, setRole] = useState<Role>('user')
+  let storageRole = sessionStorage.getItem('draft-role:' + props.draftId) || 'user'
+  var defaultRole: Role = 'user'
+
+  if(['system', 'user', 'assistant'].includes(storageRole)) {
+    defaultRole = storageRole as Role
+  }
+
+  const [getRole, setRole] = useState<Role>(defaultRole)
   function setMessageRole(role: Role) {
     setRole(role)
     sessionStorage.setItem('draft-role:' + props.draftId, role)
