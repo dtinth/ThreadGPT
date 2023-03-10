@@ -69,7 +69,7 @@ function ThreadGPT(props: ThreadGPT) {
           await ikv.set('openaiSecretKey', secretKey)
         }
         const response = await redaxios.post(
-          '/v1/chat/completions',
+          'https://api.openai.com/v1/chat/completions',
           {
             model: 'gpt-3.5-turbo',
             messages: nextMessages,
