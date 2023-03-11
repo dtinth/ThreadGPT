@@ -34,7 +34,7 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
-      - uses: ./.github/actions/publish-html-report-to-firebase
+      - uses: dtinth/action-upload-to-firebase-storage@main
         if: always()
         continue-on-error: true
         id: publish
@@ -46,6 +46,6 @@ jobs:
       - run: |
           if [ -n "$REPORT_URL" ]; then echo "# [View Playwright report]($REPORT_URL)" > $GITHUB_STEP_SUMMARY; fi
         env:
-          REPORT_URL: ${{ steps.publish.outputs.http-url }}
+          REPORT_URL: ${{ steps.publish.outputs.http-url }}/index.html
         if: always()
         continue-on-error: true
