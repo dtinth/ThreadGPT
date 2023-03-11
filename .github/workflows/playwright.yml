@@ -6,6 +6,9 @@ on:
     branches: [main, master]
 jobs:
   test:
+    permissions:
+      contents: read
+      id-token: write
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
@@ -33,6 +36,7 @@ jobs:
           retention-days: 30
       - uses: ./.github/actions/publish-html-report-to-firebase
         if: always()
+        continue-on-error: true
         with:
           workload-identity-provider: 'projects/35904191124/locations/global/workloadIdentityPools/github-actions/providers/github-actions'
           service-account: 'github@dtinth-url.iam.gserviceaccount.com'
