@@ -29,4 +29,8 @@ runs:
     - name: 'Copy HTML report to Firebase Storage'
       shell: bash
       run: |
-        gsutil cp -r '${{ inputs.path }}' '${{ inputs.storage-prefix }}/${{ github.repository }}/${{ github.run_id }}/${{ github.run_attempt }}/${{ inputs.suffix }}'
+        GS_URL='${{ inputs.storage-prefix }}/${{ github.repository }}/${{ github.run_id }}/${{ github.run_attempt }}/${{ inputs.suffix }}'
+        HTTP_URL="$(echo "$GS_URL" | sed 's/gs:\/\//https:\/\/storage.googleapis.com\//')"
+        gsutil cp -r '${{ inputs.path }}' "$GS_URL"
+        echo "[${{ inputs.suffix }}]($HTTP_URL)" >> $GITHUB_STEP_SUMMARY
+        echo "http-url=$HTTP_URL" >> $GITHUB_OUTPUT
