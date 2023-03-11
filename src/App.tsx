@@ -90,18 +90,7 @@ function ThreadGPT(props: ThreadGPT) {
           }
           await ikv.set('openaiSecretKey', secretKey)
         }
-        const response = await redaxios.post(
-          'https://api.openai.com/v1/chat/completions',
-          {
-            model: 'gpt-3.5-turbo',
-            messages: nextMessages,
-          },
-          {
-            headers: {
-              authorization: `Bearer ${secretKey}`,
-            },
-          },
-        )
+        const response = await createChatCompletion(nextMessages, secretKey)
         for (const [index, choice] of response.data.choices.entries()) {
           await addNode(choice.message, {
             data: response.data,
@@ -440,6 +429,24 @@ function ThreadGPT(props: ThreadGPT) {
         />
       ))}
     </>
+  )
+}
+
+function createChatCompletion(
+  nextMessages: (Message | undefined)[],
+  secretKey: any,
+) {
+  return redaxios.post(
+    'https://api.openai.com/v1/chat/completions',
+    {
+      model: 'gpt-3.5-turbo',
+      messages: nextMessages,
+    },
+    {
+      headers: {
+        authorization: `Bearer ${secretKey}`,
+      },
+    },
   )
 }
 
