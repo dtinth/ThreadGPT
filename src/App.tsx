@@ -636,6 +636,8 @@ function Dropdown({ items }: Dropdown) {
         type="button"
         data-bs-toggle="dropdown"
         aria-expanded="false"
+        title="More options"
+        aria-label="More options"
       >
         ⋮
       </button>
@@ -649,6 +651,7 @@ function Dropdown({ items }: Dropdown) {
                 e.preventDefault()
                 item.onClick()
               }}
+              role="menuitem"
             >
               {item.text}
             </a>
