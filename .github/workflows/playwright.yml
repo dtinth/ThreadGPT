@@ -37,8 +37,15 @@ jobs:
       - uses: ./.github/actions/publish-html-report-to-firebase
         if: always()
         continue-on-error: true
+        id: publish
         with:
           workload-identity-provider: 'projects/35904191124/locations/global/workloadIdentityPools/github-actions/providers/github-actions'
           service-account: 'github@dtinth-url.iam.gserviceaccount.com'
           storage-prefix: 'gs://dtinth-url.appspot.com'
           path: 'playwright-report'
+      - run: |
+          if [ -n "$REPORT_URL" ]; then echo "# [View Playwright report]($REPORT_URL)" > $GITHUB_STEP_SUMMARY; fi
+        env:
+          REPORT_URL: ${{ steps.publish.outputs.http-url }}
+        if: always()
+        continue-on-error: true
