@@ -24,7 +24,7 @@ type Message = {
 
 interface ThreadGPT {
   nodeId: string
-  previousMessages: ThreadNode['message'][]
+  previousMessages: Exclude<ThreadNode['message'], undefined>[]
   removeSelf?: () => void
   insertMessage?: (message: Message) => void
 }
@@ -432,10 +432,30 @@ function ThreadGPT(props: ThreadGPT) {
   )
 }
 
-function createChatCompletion(
-  nextMessages: (Message | undefined)[],
-  secretKey: any,
-) {
+function createChatCompletion(nextMessages: Message[], secretKey: string) {
+  if (secretKey === 'cat') {
+    const lastMessage = nextMessages[nextMessages.length - 1]
+    const lastText = lastMessage.content
+    const newText = lastText.replace(/\w+/g, (a) =>
+      a[0] === a[0].toLowerCase() ? 'meow' : 'Meow',
+    )
+    return {
+      data: {
+        id: 'cat' + String(ObjectID()),
+        object: 'chat.completion',
+        created: Math.floor(Date.now() / 1000),
+        model: 'cat',
+        usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+        choices: [
+          {
+            message: { role: 'assistant', content: newText },
+            finish_reason: 'stop',
+            index: 0,
+          },
+        ],
+      },
+    }
+  }
   return redaxios.post(
     'https://api.openai.com/v1/chat/completions',
     {
