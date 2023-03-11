@@ -31,3 +31,10 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+      - uses: ./.github/actions/publish-html-report-to-firebase
+        if: always()
+        with:
+          workload-identity-provider: 'projects/35904191124/locations/global/workloadIdentityPools/github-actions/providers/github-actions'
+          service-account: 'github@dtinth-url.iam.gserviceaccount.com'
+          storage-prefix: 'gs://dtinth-url.appspot.com'
+          path: 'playwright-report'

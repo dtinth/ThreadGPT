@@ -1,0 +1,32 @@
+name: 'Publish HTML report to Firebase Storage'
+description: 'Installs Node.js, pnpm, and project dependencies.'
+inputs:
+  workload-identity-provider:
+    description: 'Workload Identity Provider ID (projects/__/locations/global/workloadIdentityPools/__/providers/__)'
+    required: true
+  service-account:
+    description: 'Service account email (__@__.iam.gserviceaccount.com)'
+    required: true
+  storage-prefix:
+    description: 'Storage bucket name (gs://__)'
+    required: true
+  path:
+    description: 'Path to HTML report'
+    required: true
+  suffix:
+    description: 'Suffix to append to the path'
+    default: 'report'
+runs:
+  using: 'composite'
+  steps:
+    - name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v1'
+      with:
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.service-account }}
+    - name: 'Set up Cloud SDK'
+      uses: 'google-github-actions/setup-gcloud@v1'
+    - name: 'Copy HTML report to Firebase Storage'
+      shell: bash
+      run: |
+        gsutil cp -r '${{ inputs.path }}' '${{ inputs.storage-prefix }}/${{ github.repository }}/${{ github.run_id }}/${{ github.run_attempt }}/${{ inputs.suffix }}'
