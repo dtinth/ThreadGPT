@@ -35,5 +35,6 @@ runs:
         GS_URL='${{ inputs.storage-prefix }}/${{ github.repository }}/${{ github.run_id }}/${{ github.run_attempt }}/${{ inputs.suffix }}'
         HTTP_URL="$(echo "$GS_URL" | sed 's/gs:\/\//https:\/\/storage.googleapis.com\//')/${{ inputs.index }}"
         gsutil -m cp -r '${{ inputs.path }}' "$GS_URL"
-        echo "[${{ inputs.suffix }}]($HTTP_URL)" >> $GITHUB_STEP_SUMMARY
         echo "http-url=$HTTP_URL" >> $GITHUB_OUTPUT
+        echo "gs-url=$GS_URL" >> $GITHUB_OUTPUT
+        echo "Published HTML report to $HTTP_URL"
