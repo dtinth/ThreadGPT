@@ -270,6 +270,8 @@ function ThreadGPT(props: ThreadGPT) {
                     ? [
                         {
                           text: 'Tweak message',
+                          tooltip:
+                            'Creates a copy of this message and lets you edit it',
                           onClick: () => {
                             setShowTweakForm(true)
                           },
@@ -302,7 +304,7 @@ function ThreadGPT(props: ThreadGPT) {
                           text: 'Copy OpenAI API response as JSON',
                           onClick: () => {
                             navigator.clipboard.writeText(
-                              JSON.stringify(data.response, null, 2),
+                              JSON.stringify(data.response.data, null, 2),
                             )
                           },
                         },
@@ -621,6 +623,7 @@ export default App
 
 interface DropdownItem {
   text: string
+  tooltip?: string
   onClick: () => void
 }
 
@@ -652,6 +655,7 @@ function Dropdown({ items }: Dropdown) {
                 item.onClick()
               }}
               role="menuitem"
+              title={item.tooltip}
             >
               {item.text}
             </a>
