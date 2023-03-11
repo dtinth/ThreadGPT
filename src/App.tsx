@@ -1,13 +1,13 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ikv } from './ikv'
-import { ReactNode, useMemo, useState } from 'react'
+import { FC, ReactNode, useMemo, useState } from 'react'
 import ObjectID from 'bson-objectid'
 import redaxios from 'redaxios'
 import { micromark } from 'micromark'
 
 const rootNode = 'root'
 
-function App() {
+const App: FC = () => {
   return (
     <div className="p-4">
       <h1>ThreadGPT</h1>
@@ -37,7 +37,7 @@ interface APIError {
   }
 }
 
-function ThreadGPT(props: ThreadGPT) {
+const ThreadGPT: FC<ThreadGPT> = (props) => {
   const query = useQuery({
     queryKey: ['threadgpt', props.nodeId],
     queryFn: async (): Promise<ThreadNode> => {
@@ -434,6 +434,9 @@ function ThreadGPT(props: ThreadGPT) {
   )
 }
 
+// NOTE: keep the line before `export default ThreadGPT` when split files
+ThreadGPT.displayName = 'ThreadGPT'
+
 function createChatCompletion(nextMessages: Message[], secretKey: string) {
   if (secretKey === 'cat') {
     const lastMessage = nextMessages[nextMessages.length - 1]
@@ -491,7 +494,7 @@ interface Indent {
   depth: number
   children?: ReactNode
 }
-function Indent(props: Indent) {
+const Indent: FC<Indent> = (props) => {
   return (
     <div className="d-flex">
       {Array.from({ length: Math.max(0, props.depth) }, (_, i) => (
@@ -505,6 +508,10 @@ function Indent(props: Indent) {
     </div>
   )
 }
+
+// TODO: remove NOTE and this TODO when split files
+// NOTE: keep the line before `export default Indent` when split files
+Indent.displayName = 'Indent'
 
 interface ThreadNode {
   depth: number
@@ -528,7 +535,7 @@ function storageKey(nodeId: string) {
   return `threadgpt/${nodeId}`
 }
 
-function CreateForm(props: CreateForm) {
+const CreateForm: FC<CreateForm> = (props) => {
   const defaultValue =
     props.defaultValue || sessionStorage.getItem('draft:' + props.draftId) || ''
   let storageRole =
@@ -619,6 +626,11 @@ function CreateForm(props: CreateForm) {
   )
 }
 
+// TODO: remove NOTE and this TODO when split files
+// NOTE: keep the line before `export default CreateForm` when split files
+CreateForm.displayName = 'CreateForm'
+
+App.displayName = 'App'
 export default App
 
 interface DropdownItem {
@@ -631,7 +643,7 @@ interface Dropdown {
   items: DropdownItem[]
 }
 
-function Dropdown({ items }: Dropdown) {
+const Dropdown: FC<Dropdown> = ({ items }) => {
   return (
     <div className="dropdown">
       <button
@@ -665,6 +677,10 @@ function Dropdown({ items }: Dropdown) {
     </div>
   )
 }
+
+// TODO: remove NOTE and this TODO when split files
+// NOTE: keep the line before `export default Dropdown` when split files
+Dropdown.displayName = 'Dropdown'
 
 async function rmRf(nodeId: string): Promise<number> {
   const node = await ikv.get<ThreadNode>(storageKey(nodeId))
