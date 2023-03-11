@@ -24,9 +24,9 @@ type Message = {
 
 interface ThreadGPT {
   nodeId: string
-  parentNodeId?: string
   previousMessages: ThreadNode['message'][]
   removeSelf?: () => void
+  insertMessage?: (message: Message) => void
 }
 
 interface APIError {
@@ -58,15 +58,12 @@ function ThreadGPT(props: ThreadGPT) {
     ]
   }, [query.data?.message, props.previousMessages])
   const mutation = useMutation({
-    mutationFn: async (data: { text: string | null, role: Role | null, isTweak: boolean } | null) => {
+    mutationFn: async (data: { text: string; role: Role } | null) => {
       const text = data?.text ?? null
       const role = data?.role ?? 'user'
-      const isTweak = data?.isTweak ?? false
-      const parentNodeId = props.parentNodeId ?? props.nodeId
 
-      const selectedParent = isTweak ? parentNodeId : props.nodeId
-
-      const parent = await ikv.get(storageKey(selectedParent))
+      const parentKey = storageKey(props.nodeId)
+      const parent = await ikv.get(parentKey)
       if (!parent) {
         throw new Error('Parent node not found')
       }
@@ -117,15 +114,24 @@ function ThreadGPT(props: ThreadGPT) {
         }
         await addNode({ role: role, content: text })
       }
-      await ikv.set(storageKey(selectedParent), parent)
+      await ikv.set(parentKey, parent)
       query.refetch()
     },
   })
-  const [showCreateForm, setShowCreateForm] = useState<boolean | undefined>(undefined)
-  const [TweakMessage, setTweakMessage] = useState<Message & { isTweak: boolean }>({
-    role: 'user',
-    content: '',
-    isTweak: false,
+  const [showCreateForm, setShowCreateForm] = useState<boolean | undefined>(
+    undefined,
+  )
+  const [showTweakForm, setShowTweakForm] = useState(false)
+  const tweakMutation = useMutation({
+    mutationFn: async (data: { text: string; role: Role }) => {
+      if (!props.insertMessage) {
+        throw new Error('Cannot insert message at root level')
+      }
+      return props.insertMessage({
+        content: data.text,
+        role: data.role,
+      })
+    },
   })
   const html = useMemo(() => {
     return micromark(query.data?.message?.content ?? '')
@@ -143,8 +149,8 @@ function ThreadGPT(props: ThreadGPT) {
   const data = query.data
   const defaultShowCreateForm =
     data.children.length === 0 && data.message?.role !== 'user'
-  const showForm = showCreateForm ?? defaultShowCreateForm
-  const verb = data.depth === 0 ? 'Start a thread' : TweakMessage.isTweak ? 'Tweak' : 'Reply'
+  const effectiveShowCreateForm = showCreateForm ?? defaultShowCreateForm
+  const verb = data.depth === 0 ? 'Start a thread' : 'Reply'
   const isAPIError = (error: APIError | unknown): error is APIError => {
     return (
       typeof error === 'object' &&
@@ -171,6 +177,30 @@ function ThreadGPT(props: ThreadGPT) {
   }
   return (
     <>
+      {showTweakForm && !!data.message && (
+        <Indent depth={data.depth}>
+          <div className="pt-3">
+            {tweakMutation.isError && (
+              <div className="alert alert-danger" role="alert">
+                {renderMutationError(tweakMutation.error)}
+              </div>
+            )}
+            <CreateForm
+              draftId={props.nodeId + ':tweak'}
+              onCancel={() => setShowTweakForm(false)}
+              onSubmit={(text, role) =>
+                tweakMutation
+                  .mutateAsync({ text, role })
+                  .then(() => setShowTweakForm(false))
+              }
+              loading={tweakMutation.isLoading}
+              verb={'Tweak'}
+              defaultRole={data.message.role}
+              defaultValue={data.message.content}
+            />
+          </div>
+        </Indent>
+      )}
       <div
         id={`message-${props.nodeId}`}
         data-depth={data.depth}
@@ -185,14 +215,17 @@ function ThreadGPT(props: ThreadGPT) {
                 <div className="d-flex align-items-center">
                   <div
                     className={`rounded-circle ${
-                      data.message.role === 'user' ? 'bg-primary' : data.message.role === 'system' ? 'bg-warning' : 'bg-success'
+                      data.message.role === 'user'
+                        ? 'bg-primary'
+                        : data.message.role === 'system'
+                        ? 'bg-warning'
+                        : 'bg-success'
                     } me-3`}
                     style={{ width: '32px', height: '32px' }}
                   />
                   <span>
-                    <strong>{data.message.role}</strong>
-                    {' '}
-                    <small className='text-muted'>
+                    <strong>{data.message.role}</strong>{' '}
+                    <small className="text-muted">
                       <relative-time datetime={data.timestamp}></relative-time>
                       {renderTokens(data.response)}
                     </small>
@@ -209,7 +242,7 @@ function ThreadGPT(props: ThreadGPT) {
             </Indent>
           </>
         ) : null}
-        {!showForm && (
+        {!effectiveShowCreateForm && (
           <Indent depth={data.depth}>
             <div className="d-flex ps-3 py-2 gap-2">
               {data.message?.role === 'user' ? (
@@ -244,21 +277,12 @@ function ThreadGPT(props: ThreadGPT) {
               )}
               <Dropdown
                 items={[
-                  ...(data.message?.content
+                  ...(data.message?.content && props.insertMessage
                     ? [
                         {
                           text: 'Tweak message',
                           onClick: () => {
-                            setShowCreateForm(true)
-                            setTweakMessage(data.message ? {
-                              role: data.message.role || 'user',
-                              content: data.message.content || '',
-                              isTweak: true,
-                            } : {
-                              role: 'user',
-                              content: '',
-                              isTweak: false,
-                            })
+                            setShowTweakForm(true)
                           },
                         },
                       ]
@@ -359,17 +383,17 @@ function ThreadGPT(props: ThreadGPT) {
             </div>
           </Indent>
         )}
-        {showForm && (
-          <Indent depth={TweakMessage.isTweak ? data.depth - 1 : data.depth + 1}>
+        {effectiveShowCreateForm && (
+          <Indent depth={data.depth + 1}>
             <CreateForm
               draftId={props.nodeId}
               onCancel={() => setShowCreateForm(false)}
-              onSubmit={(text, role) => (
-                mutation.mutate({ text, role, isTweak: TweakMessage.isTweak }), setShowCreateForm(false), setTweakMessage({ role: 'user', content: '', isTweak: false })
-              )}
+              onSubmit={(text, role) =>
+                mutation
+                  .mutateAsync({ text, role })
+                  .then(() => setShowCreateForm(false))
+              }
               loading={mutation.isLoading}
-              defaultValue={TweakMessage.content}
-              defaultRole={TweakMessage.role}
               verb={verb}
             />
           </Indent>
@@ -378,7 +402,6 @@ function ThreadGPT(props: ThreadGPT) {
       {data.children.map((childId) => (
         <ThreadGPT
           nodeId={childId}
-          parentNodeId={props.nodeId}
           key={childId}
           previousMessages={nextMessages}
           removeSelf={async () => {
@@ -390,6 +413,28 @@ function ThreadGPT(props: ThreadGPT) {
             await ikv.set(storageKey(props.nodeId), node)
             let deleted = await rmRf(childId)
             alert(`Deleted ${deleted} messages`)
+            query.refetch()
+          }}
+          insertMessage={async (message: Message) => {
+            const parentKey = storageKey(props.nodeId)
+            const parent = await ikv.get(parentKey)
+            if (!parent) {
+              throw new Error('Message not found')
+            }
+            const index = parent.children.indexOf(childId)
+            if (index === -1) {
+              throw new Error('Child message not found')
+            }
+            const id = String(ObjectID())
+            const node: ThreadNode = {
+              depth: parent.depth + 1,
+              children: [],
+              message: message,
+              timestamp: new Date().toJSON(),
+            }
+            await ikv.set(storageKey(id), node)
+            parent.children.splice(index, 0, id)
+            await ikv.set(parentKey, parent)
             query.refetch()
           }}
         />
@@ -404,7 +449,9 @@ function renderTokens(response: any) {
   return (
     <>
       {', '}
-      <span title={`${usage.prompt_tokens} prompt, ${usage.completion_tokens} completion`}>
+      <span
+        title={`${usage.prompt_tokens} prompt, ${usage.completion_tokens} completion`}
+      >
         {usage.total_tokens} tokens
       </span>
     </>
@@ -453,11 +500,15 @@ function storageKey(nodeId: string) {
 }
 
 function CreateForm(props: CreateForm) {
-  const defaultValue = props.defaultValue || sessionStorage.getItem('draft:' + props.draftId) || ''
-  let storageRole = props.defaultRole || sessionStorage.getItem('draft-role:' + props.draftId) || 'user'
+  const defaultValue =
+    props.defaultValue || sessionStorage.getItem('draft:' + props.draftId) || ''
+  let storageRole =
+    props.defaultRole ||
+    sessionStorage.getItem('draft-role:' + props.draftId) ||
+    'user'
   var defaultRole: Role = 'user'
 
-  if(['system', 'user', 'assistant'].includes(storageRole)) {
+  if (['system', 'user', 'assistant'].includes(storageRole)) {
     defaultRole = storageRole as Role
   }
 
@@ -480,10 +531,38 @@ function CreateForm(props: CreateForm) {
       }}
       style={{ maxWidth: '42em' }}
     >
-      <div className="btn-group align-self-start" role="group" aria-label="Basic example">
-        <button type="button" onClick={() => setMessageRole('user')} className={`btn ${getRole === 'user' ? 'btn-primary' : 'btn-outline-secondary'}`}>User</button>
-        <button type="button" onClick={() => setMessageRole('assistant')} className={`btn ${getRole === 'assistant' ? 'btn-success' : 'btn-outline-secondary'}`}>Assistant</button>
-        <button type="button" onClick={() => setMessageRole('system')} className={`btn ${getRole === 'system' ? 'btn-warning' : 'btn-outline-secondary'}`}>System</button>
+      <div
+        className="btn-group align-self-start"
+        role="group"
+        aria-label="Basic example"
+      >
+        <button
+          type="button"
+          onClick={() => setMessageRole('user')}
+          className={`btn ${
+            getRole === 'user' ? 'btn-primary' : 'btn-outline-secondary'
+          }`}
+        >
+          User
+        </button>
+        <button
+          type="button"
+          onClick={() => setMessageRole('assistant')}
+          className={`btn ${
+            getRole === 'assistant' ? 'btn-success' : 'btn-outline-secondary'
+          }`}
+        >
+          Assistant
+        </button>
+        <button
+          type="button"
+          onClick={() => setMessageRole('system')}
+          className={`btn ${
+            getRole === 'system' ? 'btn-warning' : 'btn-outline-secondary'
+          }`}
+        >
+          System
+        </button>
       </div>
       <textarea
         name="message"
