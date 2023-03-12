@@ -254,13 +254,6 @@ function ThreadGPT(props: ThreadGPT) {
                       ? 'Generate another reply'
                       : 'Generate a reply'}
                   </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => setShowCreateForm(true)}
-                    disabled={mutation.isLoading}
-                  >
-                    Custom reply
-                  </button>
                 </>
               ) : (
                 <button
@@ -279,9 +272,17 @@ function ThreadGPT(props: ThreadGPT) {
                           text: 'Tweak message',
                           tooltip:
                             'Creates a copy of this message and lets you edit it',
-                          onClick: () => {
-                            setShowTweakForm(true)
-                          },
+                          onClick: () => setShowTweakForm(true),
+                        },
+                      ]
+                    : []),
+                  ...(data.message?.role === 'user'
+                    ? [
+                        {
+                          text: 'Custom reply',
+                          tooltip:
+                            'Add a reply to this message with your own text, can be used to help steer the assistant in the right direction',
+                          onClick: () => setShowCreateForm(true),
                         },
                       ]
                     : []),
@@ -393,6 +394,7 @@ function ThreadGPT(props: ThreadGPT) {
               }
               loading={mutation.isLoading}
               verb={verb}
+              defaultRole={data.message?.role === 'user' ? 'assistant' : 'user'}
             />
           </Indent>
         )}
