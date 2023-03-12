@@ -23,15 +23,15 @@ function useScreenSize() {
     window.addEventListener('resize', handleResize)
 
     return () => window.removeEventListener('resize', handleResize)
-  }, [])
 
-  function handleResize() {
-    setSize({
-      width: window.innerWidth,
-      height: window.innerHeight,
-      isMobile: window.innerWidth < 768
-    })
-  }
+    function handleResize() {
+      setSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        isMobile: window.innerWidth < 768
+      })
+    }
+  }, [])
 
   return { width, height, isMobile }
 }

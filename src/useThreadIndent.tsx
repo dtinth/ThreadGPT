@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import useScreenSize from './useScreenSize'
+import { useMemo } from 'react'
 
 const ICON_SIZE = 32
 const VERTICAL_LINE_SIZE = 2
@@ -7,28 +6,20 @@ const INDENT_SIZE = ICON_SIZE / 2 - VERTICAL_LINE_SIZE
 
 export type CssUnit = 'px' | 'rem' | 'em' | 'vw' | 'vh' | 'vmin' | 'vmax'
 
-interface IndentSizes {
-  iconSize: number
-  margin: number
+type CssUnitValue = `${number}${CssUnit}`
+export interface IndentSizes {
+  iconSize: CssUnitValue
+  margin: CssUnitValue
 }
 
-function useThreadIndent(): { [P in keyof IndentSizes]: `${number}${CssUnit}` } {
-  const { isMobile } = useScreenSize()
-  const [{ iconSize, margin }, setIndent] = useState<IndentSizes>({
-    iconSize: isMobile ? ICON_SIZE / 2 : ICON_SIZE,
-    margin: isMobile ? (INDENT_SIZE / 2) : INDENT_SIZE,
-  })
+function useThreadIndent(isMobile: boolean): IndentSizes {
+  return useMemo(() => getIndentSizes(isMobile), [isMobile])
+}
 
-  useEffect(() => {
-    setIndent({
-      iconSize: isMobile ? ICON_SIZE / 2 : ICON_SIZE,
-      margin: isMobile ? (INDENT_SIZE / 2) : INDENT_SIZE,
-    })
-  }, [isMobile])
-
+export function getIndentSizes(isMobile: boolean): IndentSizes {
   return {
-    iconSize: `${iconSize}px`,
-    margin: `${margin}px`,
+    iconSize: `${isMobile ? ICON_SIZE / 2 : ICON_SIZE}px`,
+    margin: `${isMobile ? INDENT_SIZE / 2 : INDENT_SIZE}px`,
   }
 }
 

@@ -1,21 +1,35 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ikv } from './ikv'
-import { ReactNode, useMemo, useState } from 'react'
+import { ReactNode, createContext, useMemo, useState } from 'react'
 import ObjectID from 'bson-objectid'
 import redaxios from 'redaxios'
 import { micromark } from 'micromark'
 import useScreenSize from './useScreenSize'
-import useThreadIndent from './useThreadIndent'
+import useThreadIndent, { IndentSizes, getIndentSizes } from './useThreadIndent'
 
 const rootNode = 'root'
 
+const IndentSizesContext = createContext<IndentSizes>(getIndentSizes(false))
+
 function App() {
-  const { isMobile } = useScreenSize()
   return (
-    <div className={`${isMobile ? 'p-2' : 'p-4'}`}>
+    <ResponsiveWrapper>
       <h1>ThreadGPT</h1>
       <ThreadGPT nodeId={rootNode} previousMessages={[]} />
-    </div>
+    </ResponsiveWrapper>
+  )
+}
+
+interface ResponsiveWrapper {
+  children: ReactNode
+}
+function ResponsiveWrapper(props: ResponsiveWrapper) {
+  const { isMobile } = useScreenSize()
+  const indentSizes = useThreadIndent(isMobile)
+  return (
+    <IndentSizesContext.Provider value={indentSizes}>
+      <div className={`${isMobile ? 'p-2' : 'p-4'}`}>{props.children}</div>
+    </IndentSizesContext.Provider>
   )
 }
 
@@ -41,7 +55,6 @@ interface APIError {
 }
 
 function ThreadGPT(props: ThreadGPT) {
-  const { iconSize } = useThreadIndent()
   const query = useQuery({
     queryKey: ['threadgpt', props.nodeId],
     queryFn: async (): Promise<ThreadNode> => {
@@ -140,8 +153,9 @@ function ThreadGPT(props: ThreadGPT) {
     )
   }
   const data = query.data
+  const message = data.message
   const defaultShowCreateForm =
-    data.children.length === 0 && data.message?.role !== 'user'
+    data.children.length === 0 && message?.role !== 'user'
   const effectiveShowCreateForm = showCreateForm ?? defaultShowCreateForm
   const verb = data.depth === 0 ? 'Start a thread' : 'Reply'
   const isAPIError = (error: APIError | unknown): error is APIError => {
@@ -171,7 +185,7 @@ function ThreadGPT(props: ThreadGPT) {
 
   return (
     <>
-      {showTweakForm && !!data.message && (
+      {showTweakForm && !!message && (
         <Indent depth={data.depth}>
           <div className="pt-3">
             {tweakMutation.isError && (
@@ -189,8 +203,8 @@ function ThreadGPT(props: ThreadGPT) {
               }
               loading={tweakMutation.isLoading}
               verb={'Tweak'}
-              defaultRole={data.message.role}
-              defaultValue={data.message.content}
+              defaultRole={message.role}
+              defaultValue={message.content}
             />
           </div>
         </Indent>
@@ -198,27 +212,31 @@ function ThreadGPT(props: ThreadGPT) {
       <div
         id={`message-${props.nodeId}`}
         data-depth={data.depth}
-        data-role={data.message?.role}
-        data-content={data.message?.content}
+        data-role={message?.role}
+        data-content={message?.content}
         data-timestamp={data.timestamp}
       >
-        {data.message ? (
+        {message ? (
           <>
             <Indent depth={data.depth - 1}>
               <div className="pt-3">
                 <div className="d-flex align-items-center">
-                  <div
-                    className={`rounded-circle ${
-                      data.message.role === 'user'
-                        ? 'bg-primary'
-                        : data.message.role === 'system'
-                        ? 'bg-warning'
-                        : 'bg-success'
-                    } me-3`}
-                    style={{ width: iconSize, height: iconSize }}
-                  />
+                  <IndentSizesContext.Consumer>
+                    {({ iconSize }) => (
+                      <div
+                        className={`rounded-circle ${
+                          message.role === 'user'
+                            ? 'bg-primary'
+                            : message.role === 'system'
+                            ? 'bg-warning'
+                            : 'bg-success'
+                        } me-3`}
+                        style={{ width: iconSize, height: iconSize }}
+                      />
+                    )}
+                  </IndentSizesContext.Consumer>
                   <span>
-                    <strong>{data.message.role}</strong>{' '}
+                    <strong>{message.role}</strong>{' '}
                     <small className="text-muted">
                       <relative-time datetime={data.timestamp}></relative-time>
                       {renderTokens(data.response)}
@@ -239,7 +257,7 @@ function ThreadGPT(props: ThreadGPT) {
         {!effectiveShowCreateForm && (
           <Indent depth={data.depth}>
             <div className="d-flex ps-3 py-2 gap-2">
-              {data.message?.role === 'user' ? (
+              {message?.role === 'user' ? (
                 <>
                   <button
                     className="btn btn-success"
@@ -264,7 +282,7 @@ function ThreadGPT(props: ThreadGPT) {
               )}
               <Dropdown
                 items={[
-                  ...(data.message?.content && props.insertMessage
+                  ...(message?.content && props.insertMessage
                     ? [
                         {
                           text: 'Tweak message',
@@ -274,7 +292,7 @@ function ThreadGPT(props: ThreadGPT) {
                         },
                       ]
                     : []),
-                  ...(data.message?.role === 'user'
+                  ...(message?.role === 'user'
                     ? [
                         {
                           text: 'Custom reply',
@@ -284,13 +302,13 @@ function ThreadGPT(props: ThreadGPT) {
                         },
                       ]
                     : []),
-                  ...(data.message?.content
+                  ...(message?.content
                     ? [
                         {
                           text: 'Copy message content',
                           onClick: () => {
                             navigator.clipboard.writeText(
-                              data.message?.content || '',
+                              message?.content || '',
                             )
                           },
                         },
@@ -392,7 +410,7 @@ function ThreadGPT(props: ThreadGPT) {
               }
               loading={mutation.isLoading}
               verb={verb}
-              defaultRole={data.message?.role === 'user' ? 'assistant' : 'user'}
+              defaultRole={message?.role === 'user' ? 'assistant' : 'user'}
             />
           </Indent>
         )}
@@ -498,17 +516,20 @@ interface Indent {
   depth: number
   children?: ReactNode
 }
-function Indent(props: Indent) {
-  const { margin } = useThreadIndent()
+function Indent({ ...props }: Indent) {
   return (
     <div className="d-flex">
-      {Array.from({ length: Math.max(0, props.depth) }, (_, i) => (
-        <div
-          key={i}
-          className="flex-shrink-0"
-          style={{ margin: `0 ${margin}`, width: 2, background: '#fff3' }}
-        />
-      ))}
+      <IndentSizesContext.Consumer>
+        {({ margin }) =>
+          Array.from({ length: Math.max(0, props.depth) }, (_, i) => (
+            <div
+              key={i}
+              className="flex-shrink-0"
+              style={{ margin: `0 ${margin}`, width: 2, background: '#fff3' }}
+            />
+          ))
+        }
+      </IndentSizesContext.Consumer>
       <div className="flex-grow-1">{props.children}</div>
     </div>
   )
