@@ -155,7 +155,7 @@ function ThreadGPT(props: ThreadGPT) {
   const data = query.data
   const message = data.message
   const defaultShowCreateForm =
-    data.children.length === 0 && data.message?.role !== 'user'
+    data.children.length === 0 && message?.role !== 'user'
   const effectiveShowCreateForm = showCreateForm ?? defaultShowCreateForm
   const verb = data.depth === 0 ? 'Start a thread' : 'Reply'
   const isAPIError = (error: APIError | unknown): error is APIError => {
@@ -185,7 +185,7 @@ function ThreadGPT(props: ThreadGPT) {
 
   return (
     <>
-      {showTweakForm && !!data.message && (
+      {showTweakForm && !!message && (
         <Indent depth={data.depth}>
           <div className="pt-3">
             {tweakMutation.isError && (
@@ -203,8 +203,8 @@ function ThreadGPT(props: ThreadGPT) {
               }
               loading={tweakMutation.isLoading}
               verb={'Tweak'}
-              defaultRole={data.message.role}
-              defaultValue={data.message.content}
+              defaultRole={message.role}
+              defaultValue={message.content}
             />
           </div>
         </Indent>
@@ -212,8 +212,8 @@ function ThreadGPT(props: ThreadGPT) {
       <div
         id={`message-${props.nodeId}`}
         data-depth={data.depth}
-        data-role={data.message?.role}
-        data-content={data.message?.content}
+        data-role={message?.role}
+        data-content={message?.content}
         data-timestamp={data.timestamp}
       >
         {message ? (
@@ -257,7 +257,7 @@ function ThreadGPT(props: ThreadGPT) {
         {!effectiveShowCreateForm && (
           <Indent depth={data.depth}>
             <div className="d-flex ps-3 py-2 gap-2">
-              {data.message?.role === 'user' ? (
+              {message?.role === 'user' ? (
                 <>
                   <button
                     className="btn btn-success"
@@ -282,7 +282,7 @@ function ThreadGPT(props: ThreadGPT) {
               )}
               <Dropdown
                 items={[
-                  ...(data.message?.content && props.insertMessage
+                  ...(message?.content && props.insertMessage
                     ? [
                         {
                           text: 'Tweak message',
@@ -292,7 +292,7 @@ function ThreadGPT(props: ThreadGPT) {
                         },
                       ]
                     : []),
-                  ...(data.message?.role === 'user'
+                  ...(message?.role === 'user'
                     ? [
                         {
                           text: 'Custom reply',
@@ -302,13 +302,13 @@ function ThreadGPT(props: ThreadGPT) {
                         },
                       ]
                     : []),
-                  ...(data.message?.content
+                  ...(message?.content
                     ? [
                         {
                           text: 'Copy message content',
                           onClick: () => {
                             navigator.clipboard.writeText(
-                              data.message?.content || '',
+                              message?.content || '',
                             )
                           },
                         },
@@ -410,7 +410,7 @@ function ThreadGPT(props: ThreadGPT) {
               }
               loading={mutation.isLoading}
               verb={verb}
-              defaultRole={data.message?.role === 'user' ? 'assistant' : 'user'}
+              defaultRole={message?.role === 'user' ? 'assistant' : 'user'}
             />
           </Indent>
         )}
