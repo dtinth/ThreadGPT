@@ -25,7 +25,7 @@ interface ResponsiveWrapper {
 }
 function ResponsiveWrapper(props: ResponsiveWrapper) {
   const { isMobile } = useScreenSize()
-  const indentSizes = useThreadIndent()
+  const indentSizes = useThreadIndent(isMobile)
   return (
     <IndentSizesContext.Provider value={indentSizes}>
       <div className={`${isMobile ? 'p-2' : 'p-4'}`}>{props.children}</div>
