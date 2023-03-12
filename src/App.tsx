@@ -4,12 +4,15 @@ import { ReactNode, useMemo, useState } from 'react'
 import ObjectID from 'bson-objectid'
 import redaxios from 'redaxios'
 import { micromark } from 'micromark'
+import useScreenSize from './useScreenSize'
+import useThreadIndent from './useThreadIndent'
 
 const rootNode = 'root'
 
 function App() {
+  const { isMobile } = useScreenSize()
   return (
-    <div className="p-4">
+    <div className={`${isMobile ? 'p-2' : 'p-4'}`}>
       <h1>ThreadGPT</h1>
       <ThreadGPT nodeId={rootNode} previousMessages={[]} />
     </div>
@@ -38,6 +41,7 @@ interface APIError {
 }
 
 function ThreadGPT(props: ThreadGPT) {
+  const { iconSize } = useThreadIndent()
   const query = useQuery({
     queryKey: ['threadgpt', props.nodeId],
     queryFn: async (): Promise<ThreadNode> => {
@@ -164,6 +168,7 @@ function ThreadGPT(props: ThreadGPT) {
       return 'An unknown error occurred'
     }
   }
+
   return (
     <>
       {showTweakForm && !!data.message && (
@@ -210,7 +215,7 @@ function ThreadGPT(props: ThreadGPT) {
                         ? 'bg-warning'
                         : 'bg-success'
                     } me-3`}
-                    style={{ width: '32px', height: '32px' }}
+                    style={{ width: iconSize, height: iconSize }}
                   />
                   <span>
                     <strong>{data.message.role}</strong>{' '}
@@ -494,13 +499,14 @@ interface Indent {
   children?: ReactNode
 }
 function Indent(props: Indent) {
+  const { margin } = useThreadIndent()
   return (
     <div className="d-flex">
       {Array.from({ length: Math.max(0, props.depth) }, (_, i) => (
         <div
           key={i}
           className="flex-shrink-0"
-          style={{ margin: '0 15px', width: '2px', background: '#fff3' }}
+          style={{ margin: `0 ${margin}`, width: 2, background: '#fff3' }}
         />
       ))}
       <div className="flex-grow-1">{props.children}</div>
