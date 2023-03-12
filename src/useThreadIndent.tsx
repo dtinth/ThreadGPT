@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import useScreenSize from './useScreenSize'
 
 const ICON_SIZE = 32
@@ -15,19 +15,18 @@ export interface IndentSizes {
 
 function useThreadIndent(): IndentSizes {
   const { isMobile } = useScreenSize()
+  const [{ iconSize, margin }, setIndent] = useState<IndentSizes>(getIndentSizes(isMobile))
 
-  const getIndentSize = useCallback(function getIndentSize(): IndentSizes {
-    return {
-      iconSize: `${isMobile ? ICON_SIZE / 2 : ICON_SIZE}px`,
-      margin: `${isMobile ? (INDENT_SIZE / 2) : INDENT_SIZE}px`,
-    }
-  }, [isMobile])
+  useEffect(() => setIndent(getIndentSizes(isMobile)), [isMobile])
 
-  const [{ iconSize, margin }, setIndent] = useState<IndentSizes>(getIndentSize())
+  return useMemo(() => ({ iconSize, margin }), [iconSize, margin])
+}
 
-  useEffect(() => setIndent(getIndentSize()), [isMobile])
-
-  return { iconSize, margin }
+export function getIndentSizes(isMobile: boolean): IndentSizes {
+  return {
+    iconSize: `${isMobile ? ICON_SIZE / 2 : ICON_SIZE}px`,
+    margin: `${isMobile ? (INDENT_SIZE / 2) : INDENT_SIZE}px`,
+  }
 }
 
 export default useThreadIndent

@@ -1,22 +1,35 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ikv } from './ikv'
-import { ReactNode, useMemo, useState } from 'react'
+import { ReactNode, createContext, useMemo, useState } from 'react'
 import ObjectID from 'bson-objectid'
 import redaxios from 'redaxios'
 import { micromark } from 'micromark'
 import useScreenSize from './useScreenSize'
-import useThreadIndent, { IndentSizes } from './useThreadIndent'
+import useThreadIndent, { IndentSizes, getIndentSizes } from './useThreadIndent'
 
 const rootNode = 'root'
 
+const IndentSizesContext = createContext<IndentSizes>(getIndentSizes(false))
+
 function App() {
+  return (
+    <ResponsiveWrapper>
+      <h1>ThreadGPT</h1>
+      <ThreadGPT nodeId={rootNode} previousMessages={[]} />
+    </ResponsiveWrapper>
+  )
+}
+
+interface ResponsiveWrapper {
+  children: ReactNode
+}
+function ResponsiveWrapper(props: ResponsiveWrapper) {
   const { isMobile } = useScreenSize()
   const indentSizes = useThreadIndent()
   return (
-    <div className={`${isMobile ? 'p-2' : 'p-4'}`}>
-      <h1>ThreadGPT</h1>
-      <ThreadGPT nodeId={rootNode} previousMessages={[]} indentSizes={indentSizes} />
-    </div>
+    <IndentSizesContext.Provider value={indentSizes}>
+      <div className={`${isMobile ? 'p-2' : 'p-4'}`}>{props.children}</div>
+    </IndentSizesContext.Provider>
   )
 }
 
@@ -31,7 +44,6 @@ interface ThreadGPT {
   previousMessages: Exclude<ThreadNode['message'], undefined>[]
   removeSelf?: () => void
   insertMessage?: (message: Message) => void
-  indentSizes: IndentSizes
 }
 
 interface APIError {
@@ -43,7 +55,6 @@ interface APIError {
 }
 
 function ThreadGPT(props: ThreadGPT) {
-  const { indentSizes: { margin, iconSize } } = props
   const query = useQuery({
     queryKey: ['threadgpt', props.nodeId],
     queryFn: async (): Promise<ThreadNode> => {
@@ -142,6 +153,7 @@ function ThreadGPT(props: ThreadGPT) {
     )
   }
   const data = query.data
+  const message = data.message
   const defaultShowCreateForm =
     data.children.length === 0 && data.message?.role !== 'user'
   const effectiveShowCreateForm = showCreateForm ?? defaultShowCreateForm
@@ -174,7 +186,7 @@ function ThreadGPT(props: ThreadGPT) {
   return (
     <>
       {showTweakForm && !!data.message && (
-        <Indent depth={data.depth} margin={margin}>
+        <Indent depth={data.depth}>
           <div className="pt-3">
             {tweakMutation.isError && (
               <div className="alert alert-danger" role="alert">
@@ -204,23 +216,27 @@ function ThreadGPT(props: ThreadGPT) {
         data-content={data.message?.content}
         data-timestamp={data.timestamp}
       >
-        {data.message ? (
+        {message ? (
           <>
-            <Indent depth={data.depth - 1} margin={margin}>
+            <Indent depth={data.depth - 1}>
               <div className="pt-3">
                 <div className="d-flex align-items-center">
-                  <div
-                    className={`rounded-circle ${
-                      data.message.role === 'user'
-                        ? 'bg-primary'
-                        : data.message.role === 'system'
-                        ? 'bg-warning'
-                        : 'bg-success'
-                    } me-3`}
-                    style={{ width: iconSize, height: iconSize }}
-                  />
+                  <IndentSizesContext.Consumer>
+                    {({ iconSize }) => (
+                      <div
+                        className={`rounded-circle ${
+                          message.role === 'user'
+                            ? 'bg-primary'
+                            : message.role === 'system'
+                            ? 'bg-warning'
+                            : 'bg-success'
+                        } me-3`}
+                        style={{ width: iconSize, height: iconSize }}
+                      />
+                    )}
+                  </IndentSizesContext.Consumer>
                   <span>
-                    <strong>{data.message.role}</strong>{' '}
+                    <strong>{message.role}</strong>{' '}
                     <small className="text-muted">
                       <relative-time datetime={data.timestamp}></relative-time>
                       {renderTokens(data.response)}
@@ -229,7 +245,7 @@ function ThreadGPT(props: ThreadGPT) {
                 </div>
               </div>
             </Indent>
-            <Indent depth={data.depth} margin={margin}>
+            <Indent depth={data.depth}>
               <div
                 className="ps-3 pb-3"
                 dangerouslySetInnerHTML={{ __html: html }}
@@ -239,7 +255,7 @@ function ThreadGPT(props: ThreadGPT) {
           </>
         ) : null}
         {!effectiveShowCreateForm && (
-          <Indent depth={data.depth} margin={margin}>
+          <Indent depth={data.depth}>
             <div className="d-flex ps-3 py-2 gap-2">
               {data.message?.role === 'user' ? (
                 <>
@@ -376,14 +392,14 @@ function ThreadGPT(props: ThreadGPT) {
           </Indent>
         )}
         {mutation.isError && (
-          <Indent depth={data.depth + 1} margin={margin}>
+          <Indent depth={data.depth + 1}>
             <div className="alert alert-danger" role="alert">
               {renderMutationError(mutation.error)}
             </div>
           </Indent>
         )}
         {effectiveShowCreateForm && (
-          <Indent depth={data.depth + 1} margin={margin}>
+          <Indent depth={data.depth + 1}>
             <CreateForm
               draftId={props.nodeId}
               onCancel={() => setShowCreateForm(false)}
@@ -402,7 +418,6 @@ function ThreadGPT(props: ThreadGPT) {
       {data.children.map((childId) => (
         <ThreadGPT
           nodeId={childId}
-          indentSizes={props.indentSizes}
           key={childId}
           previousMessages={nextMessages}
           removeSelf={async () => {
@@ -499,23 +514,22 @@ function renderTokens(response: any) {
 
 interface Indent {
   depth: number
-  /**
-   * number with css unit, such as `16px`, `1rem`, `1em`, or `3%`
-   * @default '0'
-   */
-  margin?: string
   children?: ReactNode
 }
-function Indent({ margin = '0', ...props}: Indent) {
+function Indent({ ...props }: Indent) {
   return (
     <div className="d-flex">
-      {Array.from({ length: Math.max(0, props.depth) }, (_, i) => (
-        <div
-          key={i}
-          className="flex-shrink-0"
-          style={{ margin: `0 ${margin}`, width: 2, background: '#fff3' }}
-        />
-      ))}
+      <IndentSizesContext.Consumer>
+        {({ margin }) =>
+          Array.from({ length: Math.max(0, props.depth) }, (_, i) => (
+            <div
+              key={i}
+              className="flex-shrink-0"
+              style={{ margin: `0 ${margin}`, width: 2, background: '#fff3' }}
+            />
+          ))
+        }
+      </IndentSizesContext.Consumer>
       <div className="flex-grow-1">{props.children}</div>
     </div>
   )
