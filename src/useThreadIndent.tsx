@@ -16,7 +16,7 @@ export interface IndentSizes {
 function useThreadIndent(): IndentSizes {
   const { isMobile } = useScreenSize()
 
-  const getIndentSize: () => IndentSizes = useCallback(() => {
+  const getIndentSize = useCallback(function getIndentSize(): IndentSizes {
     return {
       iconSize: `${isMobile ? ICON_SIZE / 2 : ICON_SIZE}px`,
       margin: `${isMobile ? (INDENT_SIZE / 2) : INDENT_SIZE}px`,
