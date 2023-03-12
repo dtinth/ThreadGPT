@@ -1,4 +1,4 @@
-import React, { FC, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export interface ScreenSize {
   width: number
@@ -6,11 +6,15 @@ export interface ScreenSize {
   isMobile: boolean
 }
 
+export function isUndefined(value: unknown): value is undefined {
+  return typeof value === 'undefined'
+}
+
 function useScreenSize() {
-  const [{ width, height, isMobile }, setSize] = React.useState<ScreenSize>({
-    width: 0,
-    height: 0,
-    isMobile: true
+  const [{ width, height, isMobile }, setSize] = useState<ScreenSize>({
+    width: isUndefined(window) ? 0 : window.innerWidth,
+    height: isUndefined(window) ? 0 : window.innerHeight,
+    isMobile: isUndefined(window) ?  true : window.innerWidth < 768
   })
 
   useEffect(() => {
