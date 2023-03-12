@@ -18,7 +18,7 @@ function useScreenSize() {
   })
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (isUndefined(window)) return
 
     window.addEventListener('resize', handleResize)
 
