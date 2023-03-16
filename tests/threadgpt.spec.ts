@@ -139,9 +139,16 @@ class Thread {
   }
   async tweakMessage(text: string) {
     await this.selectMenuOption('Tweak message')
-    await expect(this.textbox).toHaveValue(this.text)
-    await this.textbox.fill(text)
-    await this.locator.getByRole('button', { name: 'Tweak' }).click()
+
+    // When tweaking a message, the textbox does not belong to the thread,
+    // so we query for any textbox (assuming that no other textbox is visible).
+    const textbox = this.page.getByRole('textbox')
+
+    // When tweaking a message, the textbox is pre-filled with the message.
+    await expect(textbox).toHaveValue(this.text)
+
+    await textbox.fill(text)
+    await this.page.getByRole('button', { name: 'Tweak' }).click()
   }
   async customReply(text: string) {
     await this.selectMenuOption('Custom reply')
