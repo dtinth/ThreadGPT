@@ -459,11 +459,13 @@ async function createChatCompletion(
     }
   }
   const model = (await ikv.get('selectedModel')) || DEFAULT_MODEL
+  const temperature = +((await ikv.get('temperature')) || '0.7') || 0
   return redaxios.post(
     'https://api.openai.com/v1/chat/completions',
     {
       model: model,
       messages: nextMessages,
+      temperature: temperature,
     },
     {
       headers: {
