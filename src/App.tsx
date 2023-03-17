@@ -6,6 +6,8 @@ import redaxios from 'redaxios'
 import { micromark } from 'micromark'
 import useScreenSize from './useScreenSize'
 import useThreadIndent, { IndentSizes, getIndentSizes } from './useThreadIndent'
+import { errorToString } from './errors'
+import { queryClient } from './queryClient'
 
 const rootNode = 'root'
 
@@ -44,14 +46,6 @@ interface ThreadGPT {
   previousMessages: Exclude<ThreadNode['message'], undefined>[]
   removeSelf?: () => void
   insertMessage?: (message: Message) => void
-}
-
-interface APIError {
-  data: {
-    error: {
-      message: string
-    }
-  }
 }
 
 function ThreadGPT(props: ThreadGPT) {
@@ -106,6 +100,7 @@ function ThreadGPT(props: ThreadGPT) {
             throw new Error('OpenAI secret key is required')
           }
           await ikv.set('openaiSecretKey', secretKey)
+          queryClient.invalidateQueries(['models'])
         }
         const response = await createChatCompletion(nextMessages, secretKey)
         for (const [index, choice] of response.data.choices.entries()) {
@@ -158,31 +153,6 @@ function ThreadGPT(props: ThreadGPT) {
     data.children.length === 0 && message?.role !== 'user'
   const effectiveShowCreateForm = showCreateForm ?? defaultShowCreateForm
   const verb = data.depth === 0 ? 'Start a thread' : 'Reply'
-  const isAPIError = (error: APIError | unknown): error is APIError => {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'data' in error &&
-      typeof error.data === 'object' &&
-      error.data !== null &&
-      'error' in error.data &&
-      typeof error.data.error === 'object' &&
-      error.data.error !== null &&
-      'message' in error.data.error
-    )
-  }
-  const renderMutationError = (error: unknown) => {
-    if (typeof error === 'string') {
-      return error
-    } else if (error instanceof Error) {
-      return error.message
-    } else if (isAPIError(error)) {
-      return error.data.error.message
-    } else {
-      return 'An unknown error occurred'
-    }
-  }
-
   return (
     <>
       {showTweakForm && !!message && (
@@ -190,7 +160,7 @@ function ThreadGPT(props: ThreadGPT) {
           <div className="pt-3">
             {tweakMutation.isError && (
               <div className="alert alert-danger" role="alert">
-                {renderMutationError(tweakMutation.error)}
+                {errorToString(tweakMutation.error)}
               </div>
             )}
             <CreateForm
@@ -239,7 +209,7 @@ function ThreadGPT(props: ThreadGPT) {
                     <strong>{message.role}</strong>{' '}
                     <small className="text-muted">
                       <relative-time datetime={data.timestamp}></relative-time>
-                      {renderTokens(data.response)}
+                      {renderMeta(data.response)}
                     </small>
                   </span>
                 </div>
@@ -270,6 +240,7 @@ function ThreadGPT(props: ThreadGPT) {
                       ? 'Generate another reply'
                       : 'Generate a reply'}
                   </button>
+                  <ModelSelector disabled={mutation.isLoading} />
                 </>
               ) : (
                 <button
@@ -382,6 +353,7 @@ function ThreadGPT(props: ThreadGPT) {
                               }
                             }
                             await ikv.set('openaiSecretKey', secretKey)
+                            queryClient.invalidateQueries(['models'])
                           },
                         },
                       ]
@@ -394,7 +366,7 @@ function ThreadGPT(props: ThreadGPT) {
         {mutation.isError && (
           <Indent depth={data.depth + 1}>
             <div className="alert alert-danger" role="alert">
-              {renderMutationError(mutation.error)}
+              {errorToString(mutation.error)}
             </div>
           </Indent>
         )}
@@ -459,7 +431,10 @@ function ThreadGPT(props: ThreadGPT) {
   )
 }
 
-function createChatCompletion(nextMessages: Message[], secretKey: string) {
+async function createChatCompletion(
+  nextMessages: Message[],
+  secretKey: string,
+) {
   if (secretKey === 'cat') {
     const lastMessage = nextMessages[nextMessages.length - 1]
     const lastText = lastMessage.content
@@ -483,10 +458,11 @@ function createChatCompletion(nextMessages: Message[], secretKey: string) {
       },
     }
   }
+  const model = (await ikv.get('selectedModel')) || DEFAULT_MODEL
   return redaxios.post(
     'https://api.openai.com/v1/chat/completions',
     {
-      model: 'gpt-3.5-turbo',
+      model: model,
       messages: nextMessages,
     },
     {
@@ -497,8 +473,9 @@ function createChatCompletion(nextMessages: Message[], secretKey: string) {
   )
 }
 
-function renderTokens(response: any) {
+function renderMeta(response: any) {
   const usage = response?.data?.usage
+  const model = response?.data?.model
   if (!usage) return ''
   return (
     <>
@@ -508,6 +485,8 @@ function renderTokens(response: any) {
       >
         {usage.total_tokens} tokens
       </span>
+      {', '}
+      {model}
     </>
   )
 }
@@ -706,4 +685,78 @@ async function rmRf(nodeId: string): Promise<number> {
       ikv.del(storageKey(nodeId)).then(() => 1),
     ])
   ).reduce((a, b) => a + b, 0)
+}
+
+const DEFAULT_MODEL = 'gpt-3.5-turbo'
+interface ModelSelector {
+  disabled: boolean
+}
+function ModelSelector(props: ModelSelector) {
+  const query = useModelQuery()
+  const models = query.data || [DEFAULT_MODEL]
+  const [selectedModel, setSelectedModel] = useSelectedModel()
+  return (
+    <div className="d-inline-flex">
+      <select
+        className="form-select"
+        value={selectedModel}
+        onChange={(e) => {
+          setSelectedModel(e.target.value)
+        }}
+        disabled={props.disabled}
+        style={{ opacity: props.disabled ? 0.5 : 1 }}
+      >
+        {models.map((model) => (
+          <option key={model} value={model}>
+            {model}
+          </option>
+        ))}
+        {!!query.error && (
+          <option value="error" disabled>
+            {errorToString(query.error)}
+          </option>
+        )}
+      </select>
+    </div>
+  )
+}
+
+function useSelectedModel() {
+  const query = useQuery({
+    queryKey: ['selectedModel'],
+    queryFn: async () => {
+      const model = await ikv.get('selectedModel')
+      return model || DEFAULT_MODEL
+    },
+  })
+  return [
+    query.data || DEFAULT_MODEL,
+    async (id: string) => {
+      await ikv.set('selectedModel', id)
+      query.refetch()
+    },
+  ]
+}
+
+function useModelQuery() {
+  return useQuery({
+    queryKey: ['models'],
+    queryFn: async () => {
+      const secretKey = await ikv.get('openaiSecretKey')
+      if (!secretKey) {
+        throw new Error('Set your OpenAI secret key to select a model.')
+      }
+      if (secretKey === 'cat') {
+        return [DEFAULT_MODEL]
+      }
+      const response = await redaxios.get('https://api.openai.com/v1/models', {
+        headers: { authorization: `Bearer ${secretKey}` },
+      })
+      const models = response.data.data
+        .map((m: { id: string }) => m.id)
+        .filter((m: string) => /^gpt-(3\.5|4)/.test(m))
+        .sort()
+      return models as string[]
+    },
+  })
 }
