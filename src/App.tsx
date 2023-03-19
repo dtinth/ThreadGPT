@@ -13,6 +13,10 @@ const rootNode = 'root'
 
 const IndentSizesContext = createContext<IndentSizes>(getIndentSizes(false))
 
+const DEFAULT_MODEL = 'gpt-3.5-turbo'
+const DEFAULT_TEMPERATURE = 0.7
+const DEFAULT_TOP_P = 1
+
 function App() {
   return (
     <ResponsiveWrapper>
@@ -39,6 +43,14 @@ type Role = 'system' | 'user' | 'assistant'
 type Message = {
   role: Role
   content: string
+}
+
+function convertToNumber(input: string, isTemperature?:boolean, isTopP?:boolean ): number {
+  const number = Number(input);
+  if (isNaN(number)) {
+    throw new Error(`${input} is not a valid number`);
+  }
+  return number;
 }
 
 interface ThreadGPT {
@@ -102,7 +114,8 @@ function ThreadGPT(props: ThreadGPT) {
           await ikv.set('openaiSecretKey', secretKey)
           queryClient.invalidateQueries(['models'])
         }
-        const response = await createChatCompletion(nextMessages, secretKey)
+
+        const response = await createChatCompletion(nextMessages, secretKey, props.nodeId)
         for (const [index, choice] of response.data.choices.entries()) {
           await addNode(choice.message, {
             data: response.data,
@@ -123,6 +136,8 @@ function ThreadGPT(props: ThreadGPT) {
     undefined,
   )
   const [showTweakForm, setShowTweakForm] = useState(false)
+  const [temperature, setTemperature] = useTemperature(props.nodeId); 
+  const [topP, setTopP] = useTopP(props.nodeId);; 
   const tweakMutation = useMutation({
     mutationFn: async (data: { text: string; role: Role }) => {
       if (!props.insertMessage) {
@@ -251,6 +266,23 @@ function ThreadGPT(props: ThreadGPT) {
                   {verb}
                 </button>
               )}
+              {message?.role === 'user' ? (
+                <>
+                <div className="input-group" style={{ width: 200 }}>
+                  <span className="input-group-text" id="inputGroup-sizing-sm">Temperature</span>
+                  <input id="temperature" type="number" defaultValue={temperature} min={0} max={1} step={0.1} onChange={(e) => {
+                      setTemperature(convertToNumber(e.target.value))
+                    }
+                  } className="form-control"/>
+                </div>
+                <div className="input-group" style={{ width: 150 }}>
+                  <span className="input-group-text" id="inputGroup-sizing-sm">Top_P</span>
+                  <input id="top_p" type="number" defaultValue={topP} min={0} max={1} step={0.1} onChange={(e) => {
+                      setTopP(convertToNumber(e.target.value))}
+                  } className="form-control"/>
+                </div>
+                </>
+              ) : null}
               <Dropdown
                 items={[
                   ...(message?.content && props.insertMessage
@@ -434,6 +466,7 @@ function ThreadGPT(props: ThreadGPT) {
 async function createChatCompletion(
   nextMessages: Message[],
   secretKey: string,
+  nodeId: string,
 ) {
   if (secretKey === 'cat') {
     const lastMessage = nextMessages[nextMessages.length - 1]
@@ -459,13 +492,17 @@ async function createChatCompletion(
     }
   }
   const model = (await ikv.get('selectedModel')) || DEFAULT_MODEL
-  const temperature = +((await ikv.get('temperature')) || '0.7') || 0
+  const temperature  = (await ikv.get('temperature/' + nodeId)) || DEFAULT_TEMPERATURE
+  const top_p  = (await ikv.get('top_p/' + nodeId)) || DEFAULT_TOP_P
+  console.log("temperature", temperature);
+  console.log("top_p", top_p);
   return redaxios.post(
     'https://api.openai.com/v1/chat/completions',
     {
       model: model,
       messages: nextMessages,
       temperature: temperature,
+      top_p: top_p
     },
     {
       headers: {
@@ -689,7 +726,6 @@ async function rmRf(nodeId: string): Promise<number> {
   ).reduce((a, b) => a + b, 0)
 }
 
-const DEFAULT_MODEL = 'gpt-3.5-turbo'
 interface ModelSelector {
   disabled: boolean
 }
@@ -735,6 +771,42 @@ function useSelectedModel() {
     query.data || DEFAULT_MODEL,
     async (id: string) => {
       await ikv.set('selectedModel', id)
+      query.refetch()
+    },
+  ]
+}
+
+function useTemperature(nodeId: string) {
+  const key = 'temperature/' + nodeId;
+  const query = useQuery({
+    queryKey: [key],
+    queryFn: async () => {
+      const model = await ikv.get(key)
+      return model || DEFAULT_TEMPERATURE
+    },
+  })
+  return [
+    query.data || DEFAULT_TEMPERATURE,
+    async (temperature : number) => {
+      await ikv.set(key, temperature)
+      query.refetch()
+    },
+  ]
+}
+
+function useTopP(nodeId: string) {
+  const key = 'top_p/' + nodeId;
+  const query = useQuery({
+    queryKey: [key],
+    queryFn: async () => {
+      const model = await ikv.get(key)
+      return model || DEFAULT_TOP_P
+    },
+  })
+  return [
+    query.data || DEFAULT_TOP_P,
+    async (temperature : number) => {
+      await ikv.set(key, temperature)
       query.refetch()
     },
   ]
