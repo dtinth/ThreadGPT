@@ -8,6 +8,7 @@ import useScreenSize from './useScreenSize'
 import useThreadIndent, { IndentSizes, getIndentSizes } from './useThreadIndent'
 import { errorToString } from './errors'
 import { queryClient } from './queryClient'
+import './styles.css';
 
 const rootNode = 'root'
 
@@ -241,9 +242,10 @@ function ThreadGPT(props: ThreadGPT) {
         ) : null}
         {!effectiveShowCreateForm && (
           <Indent depth={data.depth}>
-            <div className="d-flex ps-3 py-2 gap-2">
+            <div className="d-flex ps-3 py-2 gap-2 flex-wrap">
               {message?.role === 'user' ? (
                 <>
+                <div className="btn-group btn-sm">
                   <button
                     className="btn btn-success"
                     onClick={() => mutation.mutate(null)}
@@ -255,8 +257,36 @@ function ThreadGPT(props: ThreadGPT) {
                       ? 'Generate another reply'
                       : 'Generate a reply'}
                   </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-sm btn-success dropdown-toggle dropdown-toggle-split" 
+                    data-bs-toggle="dropdown" 
+                    aria-expanded="false" 
+                    data-bs-reference="parent"
+                  />
+                  <form className="dropdown-menu dropdown-menu-lg-start p-2">
+                    <div className="input-group input-group-sm">
+                      <span className="input-group-text" style={{ width: "60%" }}>Temperature</span>
+                      <input id="temperature" type="number" defaultValue={temperature} min={0} max={1} step={0.1} 
+                        onChange={(e) => {
+                          setTemperature(convertToNumber(e.target.value))
+                        }
+                      } 
+                        className="form-control"
+                        />
+                    </div>
+                    <div className="input-group input-group-sm pt-2">
+                      <span className="input-group-text" style={{ width: "60%" }}>Top_P</span>
+                      <input id="top_p" type="number" defaultValue={topP} min={0} max={1} step={0.1} 
+                        onChange={(e) => {
+                          setTopP(convertToNumber(e.target.value))
+                          }
+                        } className="form-control"/>
+                    </div>
+                  </form>
+                </div>
                   <ModelSelector disabled={mutation.isLoading} />
-                </>
+              </>
               ) : (
                 <button
                   className="btn btn-primary"
@@ -266,23 +296,6 @@ function ThreadGPT(props: ThreadGPT) {
                   {verb}
                 </button>
               )}
-              {message?.role === 'user' ? (
-                <>
-                <div className="input-group" style={{ width: 200 }}>
-                  <span className="input-group-text" id="inputGroup-sizing-sm">Temperature</span>
-                  <input id="temperature" type="number" defaultValue={temperature} min={0} max={1} step={0.1} onChange={(e) => {
-                      setTemperature(convertToNumber(e.target.value))
-                    }
-                  } className="form-control"/>
-                </div>
-                <div className="input-group" style={{ width: 150 }}>
-                  <span className="input-group-text" id="inputGroup-sizing-sm">Top_P</span>
-                  <input id="top_p" type="number" defaultValue={topP} min={0} max={1} step={0.1} onChange={(e) => {
-                      setTopP(convertToNumber(e.target.value))}
-                  } className="form-control"/>
-                </div>
-                </>
-              ) : null}
               <Dropdown
                 items={[
                   ...(message?.content && props.insertMessage
