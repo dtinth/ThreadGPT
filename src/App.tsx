@@ -9,14 +9,28 @@ import useThreadIndent, { IndentSizes, getIndentSizes } from './useThreadIndent'
 import { errorToString } from './errors'
 import { queryClient } from './queryClient'
 import './styles.css';
+import { DEFAULT_MODEL, DEFAULT_TEMPERATURE, DEFAULT_TOP_P } from './constant/default'
+import { useModalParameter } from './helper/ModalParameter'
+import { ModalParameter } from './types/ModalParameterType'
 
 const rootNode = 'root'
 
 const IndentSizesContext = createContext<IndentSizes>(getIndentSizes(false))
 
-const DEFAULT_MODEL = 'gpt-3.5-turbo'
-const DEFAULT_TEMPERATURE = 0.7
-const DEFAULT_TOP_P = 1
+const temperature = {
+  key: "temperature",
+  defaultValue: DEFAULT_TEMPERATURE,
+} as ModalParameter;
+
+const top_p = {
+  key: "top_p",
+  defaultValue: DEFAULT_TOP_P,
+} as ModalParameter;
+
+const selectedModal = {
+  key: "selectedModel",
+  defaultValue: DEFAULT_MODEL,
+} as ModalParameter;
 
 function App() {
   return (
@@ -116,7 +130,7 @@ function ThreadGPT(props: ThreadGPT) {
           queryClient.invalidateQueries(['models'])
         }
 
-        const response = await createChatCompletion(nextMessages, secretKey, props.nodeId)
+        const response = await createChatCompletion(nextMessages, secretKey)
         for (const [index, choice] of response.data.choices.entries()) {
           await addNode(choice.message, {
             data: response.data,
@@ -137,8 +151,8 @@ function ThreadGPT(props: ThreadGPT) {
     undefined,
   )
   const [showTweakForm, setShowTweakForm] = useState(false)
-  const [temperature, setTemperature] = useTemperature(props.nodeId); 
-  const [topP, setTopP] = useTopP(props.nodeId);; 
+  const [temperatureParam, setTemperature] = useModalParameter(temperature); 
+  const [topPParam, setTopP] = useModalParameter(top_p); 
   const tweakMutation = useMutation({
     mutationFn: async (data: { text: string; role: Role }) => {
       if (!props.insertMessage) {
@@ -264,10 +278,10 @@ function ThreadGPT(props: ThreadGPT) {
                     aria-expanded="false" 
                     data-bs-reference="parent"
                   />
-                  <form className="dropdown-menu dropdown-menu-lg-start p-2">
+                  <form className="dropdown-menu dropdown-menu-lg-start p-2" style={{ width: "fit-content" }}>
                     <div className="input-group input-group-sm">
                       <span className="input-group-text" style={{ width: "60%" }}>Temperature</span>
-                      <input id="temperature" type="number" defaultValue={temperature} min={0} max={1} step={0.1} 
+                      <input id="temperature" type="number" defaultValue={temperatureParam} min={0} max={1} step={0.1} 
                         onChange={(e) => {
                           setTemperature(convertToNumber(e.target.value))
                         }
@@ -277,15 +291,16 @@ function ThreadGPT(props: ThreadGPT) {
                     </div>
                     <div className="input-group input-group-sm pt-2">
                       <span className="input-group-text" style={{ width: "60%" }}>Top_P</span>
-                      <input id="top_p" type="number" defaultValue={topP} min={0} max={1} step={0.1} 
+                      <input id="top_p" type="number" defaultValue={topPParam} min={0} max={1} step={0.1} 
                         onChange={(e) => {
                           setTopP(convertToNumber(e.target.value))
                           }
                         } className="form-control"/>
                     </div>
+                    <ModelSelector disabled={mutation.isLoading} />
                   </form>
+                  
                 </div>
-                  <ModelSelector disabled={mutation.isLoading} />
               </>
               ) : (
                 <button
@@ -479,7 +494,6 @@ function ThreadGPT(props: ThreadGPT) {
 async function createChatCompletion(
   nextMessages: Message[],
   secretKey: string,
-  nodeId: string,
 ) {
   if (secretKey === 'cat') {
     const lastMessage = nextMessages[nextMessages.length - 1]
@@ -504,18 +518,19 @@ async function createChatCompletion(
       },
     }
   }
-  const model = (await ikv.get('selectedModel')) || DEFAULT_MODEL
-  const temperature  = (await ikv.get('temperature/' + nodeId)) || DEFAULT_TEMPERATURE
-  const top_p  = (await ikv.get('top_p/' + nodeId)) || DEFAULT_TOP_P
-  console.log("temperature", temperature);
-  console.log("top_p", top_p);
+  const model = (await ikv.get(selectedModal.key)) || selectedModal.defaultValue
+  const temperatureParam  = (await ikv.get(temperature.key)) || temperature.defaultValue
+  const topPParam  = (await ikv.get(top_p.key)) || top_p.defaultValue
+  console.log("model", model);
+  console.log("temperature", temperatureParam);
+  console.log("top_p", topPParam);
   return redaxios.post(
     'https://api.openai.com/v1/chat/completions',
     {
       model: model,
       messages: nextMessages,
-      temperature: temperature,
-      top_p: top_p
+      temperature: temperatureParam,
+      top_p: topPParam,
     },
     {
       headers: {
@@ -745,9 +760,9 @@ interface ModelSelector {
 function ModelSelector(props: ModelSelector) {
   const query = useModelQuery()
   const models = query.data || [DEFAULT_MODEL]
-  const [selectedModel, setSelectedModel] = useSelectedModel()
+  const [selectedModel, setSelectedModel] = useModalParameter(selectedModal);
   return (
-    <div className="d-inline-flex">
+    <div className="d-inline-flex pt-2">
       <select
         className="form-select"
         value={selectedModel}
@@ -755,7 +770,7 @@ function ModelSelector(props: ModelSelector) {
           setSelectedModel(e.target.value)
         }}
         disabled={props.disabled}
-        style={{ opacity: props.disabled ? 0.5 : 1 }}
+        style={{ opacity: props.disabled ? 0.5 : 1, width: "fit-content" }}
       >
         {models.map((model) => (
           <option key={model} value={model}>
@@ -770,59 +785,6 @@ function ModelSelector(props: ModelSelector) {
       </select>
     </div>
   )
-}
-
-function useSelectedModel() {
-  const query = useQuery({
-    queryKey: ['selectedModel'],
-    queryFn: async () => {
-      const model = await ikv.get('selectedModel')
-      return model || DEFAULT_MODEL
-    },
-  })
-  return [
-    query.data || DEFAULT_MODEL,
-    async (id: string) => {
-      await ikv.set('selectedModel', id)
-      query.refetch()
-    },
-  ]
-}
-
-function useTemperature(nodeId: string) {
-  const key = 'temperature/' + nodeId;
-  const query = useQuery({
-    queryKey: [key],
-    queryFn: async () => {
-      const model = await ikv.get(key)
-      return model || DEFAULT_TEMPERATURE
-    },
-  })
-  return [
-    query.data || DEFAULT_TEMPERATURE,
-    async (temperature : number) => {
-      await ikv.set(key, temperature)
-      query.refetch()
-    },
-  ]
-}
-
-function useTopP(nodeId: string) {
-  const key = 'top_p/' + nodeId;
-  const query = useQuery({
-    queryKey: [key],
-    queryFn: async () => {
-      const model = await ikv.get(key)
-      return model || DEFAULT_TOP_P
-    },
-  })
-  return [
-    query.data || DEFAULT_TOP_P,
-    async (temperature : number) => {
-      await ikv.set(key, temperature)
-      query.refetch()
-    },
-  ]
 }
 
 function useModelQuery() {
