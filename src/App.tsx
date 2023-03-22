@@ -521,9 +521,6 @@ async function createChatCompletion(
   const model = (await ikv.get(selectedModal.key)) || selectedModal.defaultValue
   const temperatureParam  = (await ikv.get(temperature.key)) || temperature.defaultValue
   const topPParam  = (await ikv.get(top_p.key)) || top_p.defaultValue
-  console.log("model", model);
-  console.log("temperature", temperatureParam);
-  console.log("top_p", topPParam);
   return redaxios.post(
     'https://api.openai.com/v1/chat/completions',
     {
