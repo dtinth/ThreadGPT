@@ -8,10 +8,29 @@ import useScreenSize from './useScreenSize'
 import useThreadIndent, { IndentSizes, getIndentSizes } from './useThreadIndent'
 import { errorToString } from './errors'
 import { queryClient } from './queryClient'
+import './styles.css';
+import { DEFAULT_MODEL, DEFAULT_TEMPERATURE, DEFAULT_TOP_P } from './constant/default'
+import { useModalParameter } from './helper/ModalParameter'
+import { ModalParameter } from './types/ModalParameterType'
 
 const rootNode = 'root'
 
 const IndentSizesContext = createContext<IndentSizes>(getIndentSizes(false))
+
+const temperature = {
+  key: "temperature",
+  defaultValue: DEFAULT_TEMPERATURE,
+} as ModalParameter;
+
+const top_p = {
+  key: "top_p",
+  defaultValue: DEFAULT_TOP_P,
+} as ModalParameter;
+
+const selectedModal = {
+  key: "selectedModel",
+  defaultValue: DEFAULT_MODEL,
+} as ModalParameter;
 
 function App() {
   return (
@@ -39,6 +58,14 @@ type Role = 'system' | 'user' | 'assistant'
 type Message = {
   role: Role
   content: string
+}
+
+function convertToNumber(input: string, isTemperature?:boolean, isTopP?:boolean ): number {
+  const number = Number(input);
+  if (isNaN(number)) {
+    throw new Error(`${input} is not a valid number`);
+  }
+  return number;
 }
 
 interface ThreadGPT {
@@ -102,6 +129,7 @@ function ThreadGPT(props: ThreadGPT) {
           await ikv.set('openaiSecretKey', secretKey)
           queryClient.invalidateQueries(['models'])
         }
+
         const response = await createChatCompletion(nextMessages, secretKey)
         for (const [index, choice] of response.data.choices.entries()) {
           await addNode(choice.message, {
@@ -123,6 +151,8 @@ function ThreadGPT(props: ThreadGPT) {
     undefined,
   )
   const [showTweakForm, setShowTweakForm] = useState(false)
+  const [temperatureParam, setTemperature] = useModalParameter(temperature); 
+  const [topPParam, setTopP] = useModalParameter(top_p); 
   const tweakMutation = useMutation({
     mutationFn: async (data: { text: string; role: Role }) => {
       if (!props.insertMessage) {
@@ -226,9 +256,10 @@ function ThreadGPT(props: ThreadGPT) {
         ) : null}
         {!effectiveShowCreateForm && (
           <Indent depth={data.depth}>
-            <div className="d-flex ps-3 py-2 gap-2">
+            <div className="d-flex ps-3 py-2 gap-2 flex-wrap">
               {message?.role === 'user' ? (
                 <>
+                <div className="btn-group btn-sm">
                   <button
                     className="btn btn-success"
                     onClick={() => mutation.mutate(null)}
@@ -240,8 +271,37 @@ function ThreadGPT(props: ThreadGPT) {
                       ? 'Generate another reply'
                       : 'Generate a reply'}
                   </button>
-                  <ModelSelector disabled={mutation.isLoading} />
-                </>
+                  <button 
+                    type="button" 
+                    className="btn btn-sm btn-success dropdown-toggle dropdown-toggle-split" 
+                    data-bs-toggle="dropdown" 
+                    aria-expanded="false" 
+                    data-bs-reference="parent"
+                  />
+                  <form className="dropdown-menu dropdown-menu-lg-start p-2" style={{ width: "fit-content" }}>
+                    <div className="input-group input-group-sm">
+                      <span className="input-group-text" style={{ width: "60%" }}>Temperature</span>
+                      <input id="temperature" type="number" defaultValue={temperatureParam} min={0} max={1} step={0.1} 
+                        onChange={(e) => {
+                          setTemperature(convertToNumber(e.target.value))
+                        }
+                      } 
+                        className="form-control"
+                        />
+                    </div>
+                    <div className="input-group input-group-sm pt-2">
+                      <span className="input-group-text" style={{ width: "60%" }}>Top_P</span>
+                      <input id="top_p" type="number" defaultValue={topPParam} min={0} max={1} step={0.1} 
+                        onChange={(e) => {
+                          setTopP(convertToNumber(e.target.value))
+                          }
+                        } className="form-control"/>
+                    </div>
+                    <ModelSelector disabled={mutation.isLoading} />
+                  </form>
+                  
+                </div>
+              </>
               ) : (
                 <button
                   className="btn btn-primary"
@@ -458,14 +518,16 @@ async function createChatCompletion(
       },
     }
   }
-  const model = (await ikv.get('selectedModel')) || DEFAULT_MODEL
-  const temperature = +((await ikv.get('temperature')) || '0.7') || 0
+  const model = (await ikv.get(selectedModal.key)) || selectedModal.defaultValue
+  const temperatureParam  = (await ikv.get(temperature.key)) || temperature.defaultValue
+  const topPParam  = (await ikv.get(top_p.key)) || top_p.defaultValue
   return redaxios.post(
     'https://api.openai.com/v1/chat/completions',
     {
       model: model,
       messages: nextMessages,
-      temperature: temperature,
+      temperature: temperatureParam,
+      top_p: topPParam,
     },
     {
       headers: {
@@ -689,16 +751,15 @@ async function rmRf(nodeId: string): Promise<number> {
   ).reduce((a, b) => a + b, 0)
 }
 
-const DEFAULT_MODEL = 'gpt-3.5-turbo'
 interface ModelSelector {
   disabled: boolean
 }
 function ModelSelector(props: ModelSelector) {
   const query = useModelQuery()
   const models = query.data || [DEFAULT_MODEL]
-  const [selectedModel, setSelectedModel] = useSelectedModel()
+  const [selectedModel, setSelectedModel] = useModalParameter(selectedModal);
   return (
-    <div className="d-inline-flex">
+    <div className="d-inline-flex pt-2">
       <select
         className="form-select"
         value={selectedModel}
@@ -706,7 +767,7 @@ function ModelSelector(props: ModelSelector) {
           setSelectedModel(e.target.value)
         }}
         disabled={props.disabled}
-        style={{ opacity: props.disabled ? 0.5 : 1 }}
+        style={{ opacity: props.disabled ? 0.5 : 1, width: "fit-content" }}
       >
         {models.map((model) => (
           <option key={model} value={model}>
@@ -721,23 +782,6 @@ function ModelSelector(props: ModelSelector) {
       </select>
     </div>
   )
-}
-
-function useSelectedModel() {
-  const query = useQuery({
-    queryKey: ['selectedModel'],
-    queryFn: async () => {
-      const model = await ikv.get('selectedModel')
-      return model || DEFAULT_MODEL
-    },
-  })
-  return [
-    query.data || DEFAULT_MODEL,
-    async (id: string) => {
-      await ikv.set('selectedModel', id)
-      query.refetch()
-    },
-  ]
 }
 
 function useModelQuery() {
