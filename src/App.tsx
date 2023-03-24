@@ -12,6 +12,8 @@ import './styles.css';
 import { DEFAULT_MODEL, DEFAULT_TEMPERATURE, DEFAULT_TOP_P } from './constant/default'
 import { useModalParameter } from './helper/ModalParameter'
 import { ModalParameter } from './types/ModalParameterType'
+import ReactMarkdown from 'react-markdown'
+import gfm from "remark-gfm"
 
 const rootNode = 'root'
 
@@ -73,6 +75,14 @@ interface ThreadGPT {
   previousMessages: Exclude<ThreadNode['message'], undefined>[]
   removeSelf?: () => void
   insertMessage?: (message: Message) => void
+}
+
+const TableHead: React.FC = (props) => {
+  return (
+    <thead className="table-light">
+      {props?.children}
+    </thead>
+  );
 }
 
 function ThreadGPT(props: ThreadGPT) {
@@ -246,11 +256,31 @@ function ThreadGPT(props: ThreadGPT) {
               </div>
             </Indent>
             <Indent depth={data.depth}>
-              <div
-                className="ps-3 pb-3"
-                dangerouslySetInnerHTML={{ __html: html }}
-                style={{ maxWidth: '42em' }}
-              />
+              <div className='p-2 m-2' style={{
+                width: "fit-content"
+              }}>
+                <ReactMarkdown 
+                  remarkPlugins={[gfm]}
+                        components={{
+                      table: (props) => (
+                      <div className='p-2 m-2'>
+                        <div 
+                          className='table-responsive card'
+                        >
+                          <table 
+                            {...props} 
+                            className="table table-striped table-bordered"
+                            style={{ margin: "0px" }}  
+                          />
+                          </div>
+                      </div>
+                      ),
+                      thead: TableHead,
+                  }}
+                >
+                    {query.data?.message?.content ?? ""}
+                </ReactMarkdown>
+              </div>
             </Indent>
           </>
         ) : null}
