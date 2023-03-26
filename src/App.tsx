@@ -619,6 +619,24 @@ function CreateForm(props: CreateForm) {
     sessionStorage.setItem('draft-role:' + props.draftId, role)
   }
 
+  function handleSubmit(text: string, role: Role) {
+    sessionStorage.removeItem('draft:' + props.draftId)
+    sessionStorage.removeItem('draft-role:' + props.draftId)
+    props.onSubmit(text, role)
+  }
+
+  function handleTextareaKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const draftText = sessionStorage.getItem('draft:' + props.draftId)
+
+    if (!draftText) {
+      return
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      return handleSubmit(draftText, getRole)
+    }
+  }
+
   return (
     <form
       className="d-flex gap-1 flex-column"
@@ -673,6 +691,7 @@ function CreateForm(props: CreateForm) {
         onChange={(e) => {
           sessionStorage.setItem('draft:' + props.draftId, e.target.value)
         }}
+        onKeyDown={handleTextareaKeyDown}
         disabled={props.loading}
       />
       <div className="d-flex gap-1">
