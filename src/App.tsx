@@ -77,14 +77,6 @@ interface ThreadGPT {
   insertMessage?: (message: Message) => void
 }
 
-const TableHead: React.FC = (props) => {
-  return (
-    <thead className="table-light">
-      {props?.children}
-    </thead>
-  );
-}
-
 function ThreadGPT(props: ThreadGPT) {
   const query = useQuery({
     queryKey: ['threadgpt', props.nodeId],
@@ -261,21 +253,25 @@ function ThreadGPT(props: ThreadGPT) {
               }}>
                 <ReactMarkdown 
                   remarkPlugins={[gfm]}
-                        components={{
-                      table: (props) => (
-                      <div className='p-2 m-2'>
-                        <div 
-                          className='table-responsive card'
-                        >
-                          <table 
-                            {...props} 
-                            className="table table-striped table-bordered"
-                            style={{ margin: "0px" }}  
-                          />
-                          </div>
-                      </div>
-                      ),
-                      thead: TableHead,
+                      components={{
+                        table: (props) => (
+                        <div className='p-2 m-2'>
+                          <div 
+                            className='table-responsive card'
+                          >
+                            <table 
+                              {...props} 
+                              className="table table-striped table-bordered"
+                              style={{ margin: "0px" }}  
+                            />
+                            </div>
+                        </div>
+                        ),
+                      thead: (props) => (
+                        <thead className="table-light">
+                          {props.children}
+                        </thead>
+                      )
                   }}
                 >
                     {query.data?.message?.content ?? ""}
