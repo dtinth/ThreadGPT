@@ -6,13 +6,14 @@ import redaxios from 'redaxios'
 import { micromark } from 'micromark'
 import useScreenSize from './useScreenSize'
 import useThreadIndent, { IndentSizes, getIndentSizes } from './useThreadIndent'
-import { errorToString } from './errors'
+import { errorToString } from './helper/errors'
 import { queryClient } from './queryClient'
 import './styles.css';
 import { DEFAULT_MODEL, DEFAULT_TEMPERATURE, DEFAULT_TOP_P } from './constant/default'
 import { useModalParameter } from './helper/ModalParameter'
 import { ModalParameter } from './types/ModalParameterType'
 import { ResultPanel } from './components/ResultPanel'
+import { ErrorTab } from './components/ErrorTab'
 
 const rootNode = 'root'
 
@@ -190,9 +191,7 @@ function ThreadGPT(props: ThreadGPT) {
         <Indent depth={data.depth}>
           <div className="pt-3">
             {tweakMutation.isError && (
-              <div className="alert alert-danger" role="alert">
-                {errorToString(tweakMutation.error)}
-              </div>
+              <ErrorTab error={errorToString(tweakMutation.error)}/>
             )}
             <CreateForm
               draftId={props.nodeId + ':tweak'}
@@ -422,9 +421,7 @@ function ThreadGPT(props: ThreadGPT) {
         )}
         {mutation.isError && (
           <Indent depth={data.depth + 1}>
-            <div className="alert alert-danger" role="alert">
-              {errorToString(mutation.error)}
-            </div>
+            <ErrorTab error={errorToString(mutation.error)}></ErrorTab>
           </Indent>
         )}
         {effectiveShowCreateForm && (

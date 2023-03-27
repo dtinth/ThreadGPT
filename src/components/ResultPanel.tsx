@@ -1,12 +1,18 @@
 import React from "react";
 import ReactMarkdown from 'react-markdown'
 import gfm from "remark-gfm"
+import { ErrorTab } from "./ErrorTab";
 
 interface Props {
-    content: string;
+    content?: string;
 }
 
 const ResultPanel: React.FC<Props> = (props) =>{
+    if (!props.content) {
+        return (
+            <ErrorTab error={""}></ErrorTab>
+        )
+    }
     return (
     <div 
         className='p-2 m-2' 
@@ -36,7 +42,7 @@ const ResultPanel: React.FC<Props> = (props) =>{
               )
           }}
         >
-            {props.content ?? ""}
+            {props.content}
         </ReactMarkdown>
     </div>
     )
