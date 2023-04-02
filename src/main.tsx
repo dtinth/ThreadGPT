@@ -10,6 +10,7 @@ import { ikv } from './ikv'
 import ObjectID from 'bson-objectid'
 import 'bootstrap'
 import '@github/relative-time-element'
+import "prismjs/themes/prism-okaidia.min.css"
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
