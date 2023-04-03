@@ -41,7 +41,7 @@ const ResultPanel: React.FC<Props> = (props) =>{
                   {props.children}
                 </thead>
               ),
-              code: (props) => <CodeBlock {...props} />
+              pre: (props) => <CodeBlock {...props} />
           }}
         >
             {props.content}

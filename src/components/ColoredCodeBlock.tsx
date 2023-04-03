@@ -1,13 +1,13 @@
-import { memo, useMemo } from "react"
+import { ReactElement, memo, useMemo } from "react"
 
 import { SyntaxHighlighter } from './SyntaxHighlighter'
 import { okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
-import type { CodeProps } from "react-markdown/lib/ast-to-react"
+import type { CodeBlockProps } from './CodeBlock'
 
-const ColoredCodeBlock = memo<CodeProps>(props => {
+const ColoredCodeBlock = memo<CodeBlockProps>(props => {
   const expectedLanguage = useMemo(() => {
-    let truncatedLang = (props.className ?? '').replace('language-', '')
+    let truncatedLang = ((props.children[0] as ReactElement).props?.className ?? '').replace('language-', '')
 
     switch (truncatedLang) {
       case 'js':
@@ -23,7 +23,7 @@ const ColoredCodeBlock = memo<CodeProps>(props => {
 
   return (
     <SyntaxHighlighter language={expectedLanguage} style={okaidia}>
-      {props.children as string}
+      {(props.children[0] as ReactElement).props.children as string}
     </SyntaxHighlighter>
   )
 })
