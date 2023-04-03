@@ -1,21 +1,36 @@
-import { memo, useEffect, useRef } from "react"
+import { memo, useMemo } from "react"
 
-import Prism from "prismjs"
+import SyntaxHighlighter from 'react-syntax-highlighter'
+import { monokaiSublime } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 
-import { ReactMarkdownProps } from "react-markdown/lib/complex-types"
+import type { CodeProps } from "react-markdown/lib/ast-to-react"
 
-const ColoredCodeBlock = memo<Omit<React.DetailedHTMLProps<React.HTMLAttributes<HTMLPreElement>, HTMLPreElement>, "ref"> &
-ReactMarkdownProps>(props => {
-  const preElement = useRef<HTMLPreElement>(null)
+const ColoredCodeBlock = memo<CodeProps>(props => {
+  const expectedLanguage = useMemo(() => {
+    let truncatedLang = (props.className ?? '').replace('language-', '')
 
-  useEffect(() => {
-    if (preElement.current !== null) {
-      Prism.highlightAllUnder(preElement.current)
+    switch (truncatedLang) {
+      case 'js':
+        return 'javascript'
+      case 'typescript':
+        return 'javascript'
+      default:
+        return truncatedLang
     }
-  }, [preElement])
+  }, [props.className])
+  // const codeElement = useRef<HTMLPreElement>(null)
+
+  // useEffect(() => {
+  //   console.log(props.children[0].props.className)
+  //   if (preElement.current !== null) {
+  //     Prism.highlightAllUnder(codeElement.current)
+  //   }
+  // }, [codeElement])
 
   return (
-    <pre ref={preElement} {...props} />
+    <SyntaxHighlighter language={expectedLanguage} style={monokaiSublime}>
+      {props.children as string}
+    </SyntaxHighlighter>
   )
 })
 
