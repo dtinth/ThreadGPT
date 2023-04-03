@@ -18,14 +18,6 @@ const ColoredCodeBlock = memo<CodeProps>(props => {
         return truncatedLang
     }
   }, [props.className])
-  // const codeElement = useRef<HTMLPreElement>(null)
-
-  // useEffect(() => {
-  //   console.log(props.children[0].props.className)
-  //   if (preElement.current !== null) {
-  //     Prism.highlightAllUnder(codeElement.current)
-  //   }
-  // }, [codeElement])
 
   return (
     <SyntaxHighlighter language={expectedLanguage} style={monokaiSublime}>
