@@ -1,7 +1,7 @@
 import { memo, useMemo } from "react"
 
 import { SyntaxHighlighter } from './SyntaxHighlighter'
-import { monokaiSublime } from 'react-syntax-highlighter/dist/esm/styles/hljs'
+import { okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 import type { CodeProps } from "react-markdown/lib/ast-to-react"
 
@@ -20,7 +20,7 @@ const ColoredCodeBlock = memo<CodeProps>(props => {
   }, [props.className])
 
   return (
-    <SyntaxHighlighter language={expectedLanguage} style={monokaiSublime}>
+    <SyntaxHighlighter language={expectedLanguage} style={okaidia}>
       {props.children as string}
     </SyntaxHighlighter>
   )
