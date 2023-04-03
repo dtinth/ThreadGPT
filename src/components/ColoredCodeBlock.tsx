@@ -1,6 +1,6 @@
 import { memo, useMemo } from "react"
 
-import SyntaxHighlighter from 'react-syntax-highlighter'
+import { SyntaxHighlighter } from './SyntaxHighlighter'
 import { monokaiSublime } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 
 import type { CodeProps } from "react-markdown/lib/ast-to-react"
