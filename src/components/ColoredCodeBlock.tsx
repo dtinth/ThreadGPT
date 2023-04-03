@@ -12,6 +12,8 @@ const ColoredCodeBlock = memo<CodeProps>(props => {
     switch (truncatedLang) {
       case 'js':
         return 'javascript'
+      case 'ts':
+        return 'javascript'
       case 'typescript':
         return 'javascript'
       default:
