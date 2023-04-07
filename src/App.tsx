@@ -1,6 +1,6 @@
 import 'src/styles.css';
 import { ResponsiveWrapper } from 'src/components/ResponsiveWrapper'
-import ThreadGPT from 'src/components/ThreadGPT'
+import ThreadGPT from 'src/components/ThreadGPT/ThreadGPT'
 
 const rootNode = 'root'
 
