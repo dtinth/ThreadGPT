@@ -1,7 +1,8 @@
 import React from "react";
 import ReactMarkdown from 'react-markdown';
 import gfm from "remark-gfm";
-import { ErrorTab } from "../ErrorTab/ErrorTab";
+import { ErrorTab } from "src/components/ErrorTab/ErrorTab";
+import { CodeBlock } from "src/components/CodeBlock/CodeBlock";
 
 interface Props {
     content?: string;
@@ -39,7 +40,8 @@ const ResultPanel: React.FC<Props> = (props) =>{
 						<thead className="table-light">
 							{props.children}
 						</thead>
-					)
+					),
+					pre: (props) => <CodeBlock {...props} />
 				}}
 			>
 				{props.content}

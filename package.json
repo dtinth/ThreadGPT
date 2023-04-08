@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview --port ${PORT:-5173}",
-    "lint": "eslint --ext .js,.jsx,.ts,.tsx,.vue src"
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx,.vue src",
+    "lint-and-fix": "eslint --ext .js,.jsx,.ts,.tsx,.vue src --fix"
   },
   "dependencies": {
     "@github/relative-time-element": "^4.2.3",
