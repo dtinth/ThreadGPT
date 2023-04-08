@@ -6,6 +6,6 @@ type Message = {
 }
 
 export type {
-    Role,
-    Message
-}
+	Role,
+	Message
+};

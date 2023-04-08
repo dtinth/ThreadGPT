@@ -1,4 +1,4 @@
-import { Message } from 'src/types/Message'
+import { Message } from 'src/types/Message';
 
 interface ThreadNode {
   depth: number
@@ -6,7 +6,8 @@ interface ThreadNode {
   timestamp?: string
   message?: Message
   /** Raw OpenAI response */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   response?: any
 }
 
-export default ThreadNode
+export default ThreadNode;
