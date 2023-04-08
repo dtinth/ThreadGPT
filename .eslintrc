@@ -1,0 +1,20 @@
+{
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "plugins": [
+      "react", "@typescript-eslint", "autofix"
+    ],
+    "extends": [
+      "eslint:recommended",
+      "plugin:@typescript-eslint/eslint-recommended",
+      "plugin:@typescript-eslint/recommended"
+    ],
+    "rules": { 
+      "no-console": 1,
+      "semi": ["error", "always"],
+      "indent": ["error", 2],
+      "arrow-body-style": ["error", "as-needed"],
+      "react/self-closing-comp": ["error", { "component": true, "html": true }],
+      "no-restricted-imports": ["error",{ "patterns": ["../"] }]
+    }
+}
