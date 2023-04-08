@@ -1,5 +1,5 @@
 import 'src/styles.css';
-import { ResponsiveWrapper } from 'src/components/ResponsiveWrapper';
+import { ResponsiveWrapper } from 'src/components/ResponsiveWrapper/ResponsiveWrapper';
 import ThreadGPT from 'src/components/ThreadGPT/ThreadGPT';
 
 const rootNode = 'root';

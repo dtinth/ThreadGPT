@@ -4,19 +4,19 @@ import { useMemo, useState } from 'react';
 import ObjectID from 'bson-objectid';
 import { errorToString } from 'src/helper/errors';
 import 'src/styles.css';
-import { ResultPanel } from 'src/components/ResultPanel';
+import { ResultPanel } from 'src/components/ResultPanel/ResultPanel';
 import { Dropdown } from 'src/components/Dropdown/Dropdown';
-import { ErrorTab } from 'src/components/ErrorTab';
+import { ErrorTab } from 'src/components/ErrorTab/ErrorTab';
 import { rmRf } from 'src/helper/rmRf';
 import { Message, Role } from 'src/types/Message';
 import storageKey from 'src/keys/StorageKey';
-import { Indent } from 'src/components/Indent';
+import { Indent } from 'src/components/Indent/Indent';
 import ThreadNode from 'src/types/ThreadNode';
-import { CreateForm } from 'src/components/CreateForm';
+import { CreateForm } from 'src/components/CreateForm/CreateForm';
 import { ModelButton } from 'src/components/Model/ModelButton';
 import { DetailTab } from 'src/components/DetailTab/DetailTab';
 import { DropdownListMapper } from 'src/components/Dropdown/DropdownListMapper';
-import { mutationFunction, tweakMutationFunction } from 'src/components/ThreadGPT/ThreadGPTMutationFunction';
+import { mutationFunction, tweakMutationFunction } from 'src/components/ThreadGPT/MutationFunction';
 
 interface ThreadGPT {
   nodeId: string

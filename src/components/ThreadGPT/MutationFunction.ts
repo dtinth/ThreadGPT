@@ -5,7 +5,7 @@ import { queryClient } from 'src/queryClient';
 import { Message, Role } from 'src/types/Message';
 import storageKey from 'src/keys/StorageKey';
 import ThreadNode from 'src/types/ThreadNode';
-import { createChatCompletion } from 'src/components/CreateForm';
+import { createChatCompletion } from 'src/components/CreateForm/CreateForm';
 
 async function mutationFunction(
 	data: { text: string; role: Role } | null, 

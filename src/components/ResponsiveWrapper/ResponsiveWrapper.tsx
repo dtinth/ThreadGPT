@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import useScreenSize from 'src/useScreenSize';
 import useThreadIndent from 'src/useThreadIndent';
-import { IndentSizesContext } from 'src/components/Indent';
+import { IndentSizesContext } from 'src/components/Indent/Indent';
 
 interface ResponsiveWrapper {
   children: ReactNode

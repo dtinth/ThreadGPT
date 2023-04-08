@@ -1,5 +1,5 @@
-import { IndentSizesContext } from 'src/components/Indent';
-import renderMeta from 'src/components/RenderMeta';
+import { IndentSizesContext } from 'src/components/Indent/Indent';
+import renderMeta from 'src/components/RenderMeta/RenderMeta';
 import { Message } from 'src/types/Message';
 
 interface DetailTabProps{
