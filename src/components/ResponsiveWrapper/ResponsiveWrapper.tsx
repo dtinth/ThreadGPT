@@ -7,15 +7,15 @@ interface ResponsiveWrapper {
   children: ReactNode
 }
 function ResponsiveWrapper(props: ResponsiveWrapper) {
-	const { isMobile } = useScreenSize();
-	const indentSizes = useThreadIndent(isMobile);
-	return (
-		<IndentSizesContext.Provider value={indentSizes}>
-			<div className={`${isMobile ? 'p-2' : 'p-4'}`}>{props.children}</div>
-		</IndentSizesContext.Provider>
-	);
+  const { isMobile } = useScreenSize();
+  const indentSizes = useThreadIndent(isMobile);
+  return (
+    <IndentSizesContext.Provider value={indentSizes}>
+      <div className={`${isMobile ? 'p-2' : 'p-4'}`}>{props.children}</div>
+    </IndentSizesContext.Provider>
+  );
 }
 
 export {
-	ResponsiveWrapper,
+  ResponsiveWrapper,
 };

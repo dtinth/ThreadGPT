@@ -9,47 +9,47 @@ interface Props {
 }
 
 const ResultPanel: React.FC<Props> = (props) =>{
-	if (!props.content) {
-		return (
-			<ErrorTab error={""} />
-		);
-	}
-	return (
-		<div 
-			className='p-2 m-2' 
-			style={{
-				width: "fit-content"
-			}}>
-			<ReactMarkdown 
-				remarkPlugins={[gfm]}
-				components={{
-					table: (props) => (
-						<div className='p-2 m-2'>
-							<div 
-								className='table-responsive card'
-							>
-								<table 
-									{...props} 
-									className="table table-striped table-bordered"
-									style={{ margin: "0px" }}  
-								/>
-							</div>
-						</div>
-					),
-					thead: (props) => (
-						<thead className="table-light">
-							{props.children}
-						</thead>
-					),
-					pre: (props) => <CodeBlock {...props} />
-				}}
-			>
-				{props.content}
-			</ReactMarkdown>
-		</div>
-	);
+  if (!props.content) {
+    return (
+      <ErrorTab error={""} />
+    );
+  }
+  return (
+    <div 
+      className='p-2 m-2' 
+      style={{
+        width: "fit-content"
+      }}>
+      <ReactMarkdown 
+        remarkPlugins={[gfm]}
+        components={{
+          table: (props) => (
+            <div className='p-2 m-2'>
+              <div 
+                className='table-responsive card'
+              >
+                <table 
+                  {...props} 
+                  className="table table-striped table-bordered"
+                  style={{ margin: "0px" }}  
+                />
+              </div>
+            </div>
+          ),
+          thead: (props) => (
+            <thead className="table-light">
+              {props.children}
+            </thead>
+          ),
+          pre: (props) => <CodeBlock {...props} />
+        }}
+      >
+        {props.content}
+      </ReactMarkdown>
+    </div>
+  );
 };
 
 export {
-	ResultPanel
+  ResultPanel
 };

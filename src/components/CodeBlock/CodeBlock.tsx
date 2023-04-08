@@ -8,7 +8,7 @@ export type CodeBlockProps = Omit<DetailedHTMLProps<HTMLAttributes<HTMLPreElemen
 const LazyLoadedFullCodeBlock = lazy(() => import('./ColoredCodeBlock'));
 
 export const CodeBlock = memo<CodeBlockProps>(props => (
-	<Suspense fallback={<pre {...props} />}>
-		<LazyLoadedFullCodeBlock {...props} />
-	</Suspense>
+  <Suspense fallback={<pre {...props} />}>
+    <LazyLoadedFullCodeBlock {...props} />
+  </Suspense>
 ));

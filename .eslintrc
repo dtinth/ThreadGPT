@@ -12,7 +12,7 @@
     "rules": { 
       "no-console": 1,
       "semi": ["error", "always"],
-      "indent": ["error", "tab"],
+      "indent": ["error", 2],
       "arrow-body-style": ["error", "as-needed"],
       "react/self-closing-comp": ["error", { "component": true, "html": true }],
       "no-restricted-imports": ["error",{ "patterns": ["../"] }]

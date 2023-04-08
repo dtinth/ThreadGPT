@@ -12,11 +12,11 @@ import 'bootstrap';
 import '@github/relative-time-element';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-	<React.StrictMode>
-		<QueryClientProvider client={queryClient}>
-			<App />
-		</QueryClientProvider>
-	</React.StrictMode>,
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  </React.StrictMode>,
 );
 
 Object.assign(window, { redaxios, queryClient, ikv, ObjectID });

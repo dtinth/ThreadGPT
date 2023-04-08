@@ -6,14 +6,14 @@ interface Props {
 }
 
 const ErrorTab: React.FC<Props> = (props) =>{
-	const isEmptyString = (typeof props.error === 'string') && props.error == "";
-	return (
-		<div className="alert alert-danger" role="alert">
-			{isEmptyString ? errorToString("Content not found") : errorToString(props.error)}
-		</div>
-	);
+  const isEmptyString = (typeof props.error === 'string') && props.error == "";
+  return (
+    <div className="alert alert-danger" role="alert">
+      {isEmptyString ? errorToString("Content not found") : errorToString(props.error)}
+    </div>
+  );
 };
 
 export {
-	ErrorTab
+  ErrorTab
 };

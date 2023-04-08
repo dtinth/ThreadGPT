@@ -13,14 +13,14 @@ export interface IndentSizes {
 }
 
 function useThreadIndent(isMobile: boolean): IndentSizes {
-	return useMemo(() => getIndentSizes(isMobile), [isMobile]);
+  return useMemo(() => getIndentSizes(isMobile), [isMobile]);
 }
 
 export function getIndentSizes(isMobile: boolean): IndentSizes {
-	return {
-		iconSize: `${isMobile ? ICON_SIZE / 2 : ICON_SIZE}px`,
-		margin: `${isMobile ? INDENT_SIZE / 2 : INDENT_SIZE}px`,
-	};
+  return {
+    iconSize: `${isMobile ? ICON_SIZE / 2 : ICON_SIZE}px`,
+    margin: `${isMobile ? INDENT_SIZE / 2 : INDENT_SIZE}px`,
+  };
 }
 
 export default useThreadIndent;
